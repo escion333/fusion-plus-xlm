@@ -1,4 +1,5 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_RESOLVER_API_URL || 'http://localhost:3001';
+const PROXY_BASE_URL = process.env.NEXT_PUBLIC_PROXY_API_URL || 'http://localhost:3002';
 
 interface CreateSwapRequest {
   sourceChain: string;
@@ -26,6 +27,114 @@ interface SwapResponse {
   hashedSecret: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// 1inch Fusion+ API interfaces
+interface FusionOrder {
+  orderHash: string;
+  maker: string;
+  makerAsset: string;
+  takerAsset: string;
+  makingAmount: string;
+  takingAmount: string;
+  deadline: number;
+  status: string;
+  crossChain?: {
+    enabled: boolean;
+    destinationChain: string;
+    stellarReceiver?: string;
+  };
+}
+
+interface QuoteRequest {
+  fromToken: string;
+  toToken: string;
+  amount: string;
+  fromChain: string;
+  toChain: string;
+}
+
+interface QuoteResponse {
+  fromToken: string;
+  toToken: string;
+  fromAmount: string;
+  toAmount: string;
+  estimatedGas: string;
+  protocols: string[][];
+  crossChain?: boolean;
+}
+
+export class FusionAPI {
+  static async getActiveOrders(maker?: string): Promise<FusionOrder[]> {
+    try {
+      const params = maker ? `?maker=${maker}` : '';
+      const response = await fetch(`${PROXY_BASE_URL}/api/fusion/orders/active${params}`);
+      
+      if (!response.ok) {
+        // Fall back to mock orders
+        const mockResponse = await fetch(`${PROXY_BASE_URL}/api/mock/fusion/orders/active${params}`);
+        return mockResponse.json();
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('Failed to fetch active orders:', error);
+      return [];
+    }
+  }
+  
+  static async createOrder(order: Partial<FusionOrder>): Promise<FusionOrder> {
+    try {
+      const response = await fetch(`${PROXY_BASE_URL}/api/fusion/orders/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(order),
+      });
+      
+      if (!response.ok) {
+        // Fall back to mock create
+        const mockResponse = await fetch(`${PROXY_BASE_URL}/api/mock/fusion/orders/create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(order),
+        });
+        const data = await mockResponse.json();
+        return data.order;
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('Failed to create order:', error);
+      throw error;
+    }
+  }
+  
+  static async getQuote(request: QuoteRequest): Promise<QuoteResponse> {
+    try {
+      const params = new URLSearchParams({
+        src: request.fromToken,
+        dst: request.toToken,
+        amount: request.amount,
+      });
+      
+      const response = await fetch(`${PROXY_BASE_URL}/api/1inch/quote?${params}`);
+      
+      if (!response.ok) {
+        // Fall back to mock quote
+        const mockResponse = await fetch(`${PROXY_BASE_URL}/api/mock/quote?${params}`);
+        return mockResponse.json();
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('Failed to get quote:', error);
+      throw error;
+    }
+  }
 }
 
 export class ResolverAPI {

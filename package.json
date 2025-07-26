@@ -6,12 +6,17 @@
     "dev": "cd frontend && npm run dev",
     "build": "tsc && cd frontend && npm run build",
     "build:resolver": "tsc --project tsconfig.resolver.json",
+    "build:proxy": "tsc",
     "start": "cd frontend && npm run start",
     "lint": "cd frontend && npm run lint",
     "test": "vitest",
     "test:resolver": "vitest test/resolver",
     "resolver": "node dist/services/resolver/index.js",
-    "resolver:dev": "tsx src/services/resolver/index.ts"
+    "resolver:dev": "tsx src/services/resolver/index.ts",
+    "proxy": "node dist/proxy/server.js",
+    "proxy:dev": "tsx src/proxy/server.ts",
+    "fork": "./scripts/1inch/run-fork.sh",
+    "1inch:setup": "npx hardhat run scripts/1inch/setup-fork.ts --network hardhat"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^11.3.0",
@@ -20,9 +25,16 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "@1inch/fusion-sdk": "^2.3.5",
+    "@1inch/limit-order-protocol-utils": "^4.0.1",
+    "@nomicfoundation/hardhat-ethers": "^3.1.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.1.0",
     "@types/node": "^24.1.0",
     "@types/pg": "^8.15.4",
     "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "hardhat": "^2.26.1",
+    "http-proxy-middleware": "^3.0.5",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "vitest": "^2.1.9"

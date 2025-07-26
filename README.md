@@ -34,11 +34,18 @@ First implementation of 1inch Fusion+ protocol for Stellar blockchain, enabling 
   - Docker support for easy deployment
   - RESTful API for frontend integration
 
+- **1inch Fusion+ Integration**: Complete implementation
+  - API proxy server for CORS handling
+  - Fusion SDK integration for order creation
+  - Mock resolver system demonstrating Dutch auction
+  - Cross-chain flow simulation
+  - Order builder with proper formatting
+  - Frontend integration with quote fetching
+
 ### 🚧 In Progress
 - Contract deployment to testnets (Stellar testnet and Ethereum Sepolia)
-- End-to-end cross-chain testing
-- Real-time swap progress visualization
-- Merkle tree support for partial fills
+- End-to-end cross-chain testing with real networks
+- Demo video creation
 
 ## Quick Start
 
@@ -50,8 +57,21 @@ First implementation of 1inch Fusion+ protocol for Stellar blockchain, enabling 
 # Services will be available at:
 # - Frontend: http://localhost:3000
 # - Resolver API: http://localhost:3001
+# - 1inch Proxy: http://localhost:3002
 # - PostgreSQL: localhost:5432
 # - Redis: localhost:6379
+```
+
+### 1inch Integration Demo
+```bash
+# Run the complete 1inch Fusion+ demo
+./scripts/1inch/run-demo.sh
+
+# Or start services individually:
+npm run fork          # Start Hardhat mainnet fork
+npm run proxy:dev     # Start 1inch API proxy
+npm run resolver:dev  # Start resolver service
+npm run dev          # Start frontend
 ```
 
 ### Manual Setup
