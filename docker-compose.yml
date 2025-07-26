@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: fusion
+      POSTGRES_PASSWORD: fusion_password
+      POSTGRES_DB: fusion_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fusion"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Resolver Service
+  resolver:
+    build:
+      context: .
+      dockerfile: src/services/resolver/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      # Stellar Configuration
+      STELLAR_NETWORK: testnet
+      STELLAR_HORIZON_URL: https://horizon-testnet.stellar.org
+      STELLAR_SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
+      
+      # Ethereum Configuration
+      ETHEREUM_NETWORK: sepolia
+      ETHEREUM_RPC_URL: ${ETHEREUM_RPC_URL}
+      
+      # Resolver Configuration
+      RESOLVER_ADDRESS: ${RESOLVER_ADDRESS}
+      RESOLVER_PRIVATE_KEY: ${RESOLVER_PRIVATE_KEY}
+      
+      # Database
+      DATABASE_URL: postgresql://fusion:fusion_password@postgres:5432/fusion_db
+      REDIS_URL: redis://redis:6379
+      
+      # Service Configuration
+      PORT: 3001
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./src/services/resolver:/app/src/services/resolver
+      - /app/node_modules
+    command: npm run resolver:dev
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_RESOLVER_API_URL: http://localhost:3001
+      NEXT_PUBLIC_STELLAR_NETWORK: testnet
+      NEXT_PUBLIC_ETHEREUM_NETWORK: sepolia
+    depends_on:
+      - resolver
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+
+volumes:
+  postgres_data:
+  redis_data:
