@@ -11,7 +11,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       forking: {
         url: process.env.ETHEREUM_RPC_URL || "https://eth-mainnet.g.alchemy.com/v2/demo",
-        blockNumber: 20000000, // Use a recent block number
+        // blockNumber: 20000000, // Comment out to use latest block
       },
       chainId: 1,
     },

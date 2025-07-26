@@ -1,0 +1,119 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IEscrowFactory",
+  "sourceName": "contracts/interfaces/IEscrowFactory.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "orderHash",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "hashlock",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "address",
+          "name": "srcMaker",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "srcTaker",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "srcToken",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "srcAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "safetyDeposit",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timelocks",
+          "type": "uint256"
+        }
+      ],
+      "name": "createEscrow",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "escrow",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "orderHash",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "hashlock",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "address",
+          "name": "srcMaker",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "srcTaker",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "srcToken",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "srcAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "safetyDeposit",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timelocks",
+          "type": "uint256"
+        }
+      ],
+      "name": "getEscrowAddress",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
