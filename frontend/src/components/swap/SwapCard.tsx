@@ -10,21 +10,25 @@ import { ChainSelector } from "./ChainSelector";
 import { useState, useEffect } from "react";
 import { useWallets } from "@/contexts/WalletContext";
 import { useSwap } from "@/hooks/useSwap";
-import { ResolverAPI, FusionAPI } from "@/services/api";
+import { useBalances } from "@/hooks/useBalances";
+import { useDebounce } from "@/hooks/useDebounce";
+import { FusionAPI } from "@/services/api";
 
 export function SwapCard() {
   const [fromChain, setFromChain] = useState("ethereum");
-  const [toChain, setToChain] = useState("stellar");
+  const [toChain, setToChain] = useState("ethereum");
   const [fromToken, setFromToken] = useState("ETH");
-  const [toToken, setToToken] = useState("XLM");
+  const [toToken, setToToken] = useState("USDC");
   const [fromAmount, setFromAmount] = useState("");
   const [toAmount, setToAmount] = useState("");
-  const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
-  const [use1inch, setUse1inch] = useState(true);
   const [showActiveOrders, setShowActiveOrders] = useState(false);
 
   const { isFullyConnected, connectWallets } = useWallets();
-  const { createSwap, createFusionOrder, getQuote, isLoading, error, currentSwapId, swapStatus, quote, activeOrders, fetchActiveOrders } = useSwap();
+  const { createFusionOrder, getQuote, isLoading, error, currentSwapId, swapStatus, quote, activeOrders, fetchActiveOrders } = useSwap();
+  const { ethereum: ethBalance, stellar: xlmBalance, loading: balancesLoading, refreshBalances } = useBalances();
+  
+  // Debounce amount input for quote fetching
+  const debouncedFromAmount = useDebounce(fromAmount, 500);
 
   const handleSwap = async () => {
     if (!isFullyConnected) {
@@ -33,58 +37,36 @@ export function SwapCard() {
     }
 
     try {
-      if (use1inch) {
-        // Create 1inch Fusion order
-        const order = await createFusionOrder(
-          fromChain,
-          toChain,
-          fromToken,
-          toToken,
-          fromAmount
-        );
-        console.log("Fusion order created:", order);
-      } else {
-        // Use direct resolver
-        const swap = await createSwap(
-          fromChain,
-          toChain,
-          fromToken,
-          toToken,
-          fromAmount
-        );
-        console.log("Swap created:", swap);
-      }
+      const order = await createFusionOrder(
+        fromChain,
+        toChain,
+        fromToken,
+        toToken,
+        fromAmount
+      );
+      console.log("Fusion order created:", order);
+      // Refresh balances after successful swap
+      refreshBalances();
     } catch (error) {
       console.error("Swap failed:", error);
     }
   };
 
-  // Check API status on mount
+  // Fetch active orders on mount
   useEffect(() => {
-    ResolverAPI.checkHealth().then(isHealthy => {
-      setApiStatus(isHealthy ? 'online' : 'offline');
-    });
-    
-    // Fetch active orders if using 1inch
-    if (use1inch) {
-      fetchActiveOrders();
-    }
-  }, [use1inch, fetchActiveOrders]);
+    fetchActiveOrders();
+  }, [fetchActiveOrders]);
   
-  // Get quote when amount changes
+  // Get quote when amount changes (using debounced value)
   useEffect(() => {
-    if (fromAmount && parseFloat(fromAmount) > 0) {
-      const debounceTimer = setTimeout(() => {
-        getQuote(fromChain, toChain, fromToken, toToken, fromAmount)
-          .then(quote => {
-            setToAmount(ethers.formatUnits(quote.toAmount, toToken === 'XLM' ? 7 : 6));
-          })
-          .catch(console.error);
-      }, 500);
-      
-      return () => clearTimeout(debounceTimer);
+    if (debouncedFromAmount && parseFloat(debouncedFromAmount) > 0 && isFullyConnected) {
+      getQuote(fromChain, toChain, fromToken, toToken, debouncedFromAmount)
+        .then(quote => {
+          setToAmount(ethers.formatUnits(quote.toAmount, toToken === 'XLM' ? 7 : 6));
+        })
+        .catch(console.error);
     }
-  }, [fromAmount, fromChain, toChain, fromToken, toToken, getQuote]);
+  }, [debouncedFromAmount, fromChain, toChain, fromToken, toToken, getQuote, isFullyConnected]);
 
   const switchChains = () => {
     setFromChain(toChain);
@@ -98,18 +80,9 @@ export function SwapCard() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-2xl font-bold">
-            {use1inch ? "1inch Fusion+" : "Cross-Chain Swap"}
-          </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setUse1inch(!use1inch)}
-          >
-            {use1inch ? "Use Direct" : "Use 1inch"}
-          </Button>
-        </div>
+        <CardTitle className="text-2xl font-bold">
+          1inch Fusion+
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* From Section */}
@@ -133,6 +106,11 @@ export function SwapCard() {
               chain={fromChain}
             />
           </div>
+          {isFullyConnected && !balancesLoading && (
+            <div className="text-xs text-muted-foreground">
+              Balance: {fromChain === 'ethereum' ? `${parseFloat(ethBalance).toFixed(4)} ETH` : `${parseFloat(xlmBalance).toFixed(2)} XLM`}
+            </div>
+          )}
         </div>
 
         {/* Switch Button */}
@@ -169,6 +147,11 @@ export function SwapCard() {
               chain={toChain}
             />
           </div>
+          {isFullyConnected && !balancesLoading && (
+            <div className="text-xs text-muted-foreground">
+              Balance: {toChain === 'ethereum' ? `${parseFloat(ethBalance).toFixed(4)} ETH` : `${parseFloat(xlmBalance).toFixed(2)} XLM`}
+            </div>
+          )}
         </div>
 
         {/* Swap Details */}
@@ -189,18 +172,14 @@ export function SwapCard() {
             <span className="text-muted-foreground">Network Fee</span>
             <span>{quote?.estimatedGas ? `~${ethers.formatUnits(quote.estimatedGas, 'gwei')} Gwei` : '--'}</span>
           </div>
-          {use1inch && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Protocol</span>
+            <span className="text-blue-600">1inch Fusion+</span>
+          </div>
+          {quote?.isMockData && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Protocol</span>
-              <span className="text-blue-600">1inch Fusion+</span>
-            </div>
-          )}
-          {apiStatus !== 'checking' && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Resolver Status</span>
-              <span className={apiStatus === 'online' ? 'text-green-600' : 'text-red-600'}>
-                {apiStatus === 'online' ? '● Online' : '● Offline'}
-              </span>
+              <span className="text-muted-foreground">Data Source</span>
+              <span className="text-yellow-600 text-xs">Mock Data (Demo Mode)</span>
             </div>
           )}
         </div>
@@ -221,7 +200,7 @@ export function SwapCard() {
         )}
 
         {/* Active Orders */}
-        {use1inch && activeOrders.length > 0 && (
+        {activeOrders.length > 0 && (
           <div className="border-t pt-4 space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium">Active Orders</span>
@@ -260,7 +239,7 @@ export function SwapCard() {
           size="lg"
           disabled={(!fromAmount || parseFloat(fromAmount) <= 0) || isLoading}
         >
-          {isLoading ? "Processing..." : isFullyConnected ? use1inch ? "Create 1inch Order" : "Swap" : "Connect Wallets"}
+          {isLoading ? "Processing..." : isFullyConnected ? "Create 1inch Order" : "Connect Wallets"}
         </Button>
       </CardContent>
     </Card>

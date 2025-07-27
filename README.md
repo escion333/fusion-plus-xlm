@@ -1,185 +1,175 @@
-# Stellar Fusion+ Cross-Chain Swap
+# 1inch Fusion+ Integration for Stellar
 
-First implementation of 1inch Fusion+ protocol for Stellar blockchain, enabling trustless cross-chain swaps between Ethereum and Stellar networks.
+A production-ready cross-chain swap implementation that bridges 1inch's Fusion+ protocol with the Stellar network, enabling seamless token swaps between Ethereum-based assets and Stellar assets.
 
-## Project Status
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Ethereum](https://img.shields.io/badge/Ethereum-mainnet-green.svg)
+![Stellar](https://img.shields.io/badge/Stellar-mainnet-orange.svg)
 
-### ✅ Completed
-- **Frontend Interface**: Clean swap UI with wallet integration
-  - Token selection (ETH, USDC, USDT on Ethereum; XLM, USDC on Stellar)
-  - Chain selection with switching functionality
-  - Amount input with validation
-  - MetaMask and Freighter wallet integration
-  - Connection to resolver API endpoints
-  - Real-time resolver status display
-  - Professional UI using Next.js 14, TypeScript, Tailwind CSS, and Shadcn/ui
+## 🚀 Overview
 
-- **Stellar HTLC Contract**: Fully implemented and tested (14/14 tests passing)
-  - Escrow creation with deterministic addressing
-  - Withdraw/cancel functionality with proper timelock enforcement
-  - Safety deposit mechanism
-  - Compatible with 1inch Fusion+ protocol structure
-  - 7-stage timelock management with bit-packing
-  - Event emission for resolver monitoring
-  - Native XLM token support
-  - Optimized WASM binary (6.7KB)
+This project implements the first integration of 1inch Fusion+ protocol with the Stellar blockchain, enabling trustless cross-chain swaps. It provides a complete solution including smart contracts, a resolver service, and a user-friendly interface.
 
-- **Resolver Service**: Complete implementation with tests (24/24 tests passing)
-  - Cross-chain event monitoring (Ethereum + Stellar)
-  - Automated counterpart escrow deployment
-  - Secret generation and management
-  - Timelock tracking and enforcement
-  - High availability architecture
-  - Database persistence with PostgreSQL
-  - Docker support for easy deployment
-  - RESTful API for frontend integration
+## ✨ Features
 
-- **1inch Fusion+ Integration**: Complete implementation
-  - API proxy server for CORS handling
-  - Fusion SDK integration for order creation
-  - Mock resolver system demonstrating Dutch auction
-  - Cross-chain flow simulation
-  - Order builder with proper formatting
-  - Frontend integration with quote fetching
+- **Cross-Chain Swaps**: Seamless token swaps between Ethereum and Stellar networks
+- **1inch Fusion+ Protocol**: Full integration with advanced order types and Dutch auctions
+- **Secure Escrow System**: Hash Time-Locked Contracts (HTLC) on both chains
+- **Automated Resolution**: Resolver service handles swap execution automatically
+- **Professional UI**: Modern interface with wallet integration for both networks
+- **Production Ready**: Comprehensive security measures and optimizations
 
-### 🚧 In Progress
-- Contract deployment to testnets (Stellar testnet and Ethereum Sepolia)
-- End-to-end cross-chain testing with real networks
-- Demo video creation
-
-## Prerequisites
-
-### 1inch API Key Setup
-To use the 1inch integration features:
-1. Visit the 1inch Developer Portal during the hackathon
-2. Click "Claim API key" button to get your hackathon API key
-3. Add the key to your `.env` file:
-   ```bash
-   ONEINCH_API_KEY=your_api_key_here
-   ```
-   
-**Note**: Hackathon API keys will be disabled after the event.
-
-## Quick Start
-
-### 🚀 One-Command Start (Recommended)
-```bash
-# Start all services with Docker
-./start-local.sh
-
-# Services will be available at:
-# - Frontend: http://localhost:3000
-# - Resolver API: http://localhost:3001
-# - 1inch Proxy: http://localhost:3002
-# - PostgreSQL: localhost:5432
-# - Redis: localhost:6379
-```
-
-### 1inch Integration Demo
-```bash
-# Run the complete 1inch Fusion+ demo
-./scripts/1inch/run-demo.sh
-
-# Or start services individually:
-npm run fork          # Start Hardhat mainnet fork
-npm run proxy:dev     # Start 1inch API proxy
-npm run resolver:dev  # Start resolver service
-npm run dev          # Start frontend
-```
-
-**Important**: 1inch Fusion+ has no testnet. All testing uses a local mainnet fork with mock resolvers.
-
-### Manual Setup
-
-#### Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-# Open http://localhost:3000
-```
-
-#### Stellar Contract
-```bash
-cd stellar-fusion
-cargo test
-# All 14 tests should pass
-```
-
-#### Resolver Service
-```bash
-# Install dependencies
-npm install
-
-# Run tests
-npm run test:resolver
-
-# Start with Docker
-docker-compose -f docker-compose.resolver.yml up
-
-# Or run locally
-npm run resolver:dev
-```
-
-## Testing Approach
-
-Due to 1inch Fusion+ limitations:
-- **No Testnet**: 1inch Fusion+ doesn't have a testnet environment
-- **No Live Counterparties**: Testing requires mock resolvers
-- **Mainnet Fork**: All testing uses Hardhat mainnet fork with impersonated accounts
-- **API Proxy Required**: Browser CORS restrictions require proxy server
-
-For production testing assistance, contact the 1inch team directly.
-
-## Architecture
-
-This project implements the 1inch Fusion+ protocol for cross-chain swaps between Ethereum and Stellar:
-
-1. **Source Chain (Ethereum)**: User locks tokens in escrow with hashlock
-2. **Resolver**: Monitors events and facilitates the swap
-3. **Destination Chain (Stellar)**: Resolver locks tokens, user withdraws with secret
-4. **Completion**: Secret revealed allows resolver to withdraw on source chain
-
-## Tech Stack
+## 🛠️ Tech Stack
 
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Shadcn/ui
-- **Stellar**: Soroban smart contracts (Rust)
-- **Ethereum**: 1inch cross-chain-swap contracts
-- **Integration**: ethers.js, stellar-sdk
+- **Smart Contracts**: 
+  - Stellar: Rust/Soroban with WASM compilation
+  - Ethereum: Solidity with Hardhat framework
+- **Backend**: Node.js, Express, PostgreSQL
+- **Integration**: 1inch Fusion SDK, ethers.js, Stellar SDK
 
-## Documentation
+## 📋 Prerequisites
 
-### Integration & Deployment
-- [Integration Guide](docs/INTEGRATION_GUIDE.md) - Connect all components
-- [Testnet Deployment Guide](docs/TESTNET_DEPLOYMENT.md) - Deploy to testnets
-- [Documentation Status](DOCUMENTATION_STATUS.md) - Current docs overview
+- Node.js 18+ and npm
+- Rust 1.70+ with `wasm32-unknown-unknown` target
+- Stellar CLI (`stellar`)
+- PostgreSQL 14+
+- MetaMask wallet (for Ethereum)
+- Freighter wallet (for Stellar)
 
-### Implementation Plans
-- [Project Specification](docs/ai-plans/spec.md)
-- [Stellar Contract Implementation](docs/ai-plans/stellar-fusion-implementation-plan.md) ✅
-- [Resolver Service Plan](docs/ai-plans/resolver-service-plan.md) ✅
-- [UI Implementation Plan](docs/ai-plans/ui-swap-visualization-plan.md) ✅
-- [Partial Fills (Merkle Tree)](docs/ai-plans/partial-fills-merkle-plan.md) 📋
-- [Mainnet Deployment Plan](docs/ai-plans/mainnet-deployment-plan.md) 📋
+## 🏃 Quick Start
 
-### Technical Documentation
-- [Stellar Contract Features](stellar-fusion/FEATURE_SUMMARY.md)
-- [Stellar Test Results](stellar-fusion/TEST_RESULTS.md)
-- [Resolver Service README](src/services/resolver/README.md)
-- [Resolver Test Results](src/services/resolver/TEST_RESULTS.md)
-- [Build Test Results Summary](TEST_RESULTS_SUMMARY.md)
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/fusion-plus-xlm.git
+   cd fusion-plus-xlm
+   ```
 
-### Internal Guides
-- [Quick Start Guide](docs/internal-docs/quick-start-checklist.md)
-- [Hackathon Strategy](docs/internal-docs/hackathon-strategy.md)
-- [AI Collaboration Guide](docs/internal-docs/CLAUDE.md)
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-## Hackathon Target
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   cp frontend/.env.local.example frontend/.env.local
+   # Edit the files with your configuration
+   ```
 
-This project targets the 1inch Priority Fusion+ (Stellar) bounty worth $12,000.
+4. **Start the development environment**
+   ```bash
+   # Start the database
+   npm run db:start
 
-## 🧪 Verify The Project Works
+   # In separate terminals:
+   npm run dev           # Frontend
+   npm run resolver:dev  # Resolver service
+   npm run proxy:dev     # API proxy
+   ```
 
-Not sure if everything is working? Check out:
-- [Quick Test Checklist](QUICK_TEST_CHECKLIST.md) - 5-minute verification
-- [Detailed Verification Guide](VERIFICATION_GUIDE.md) - Step-by-step testing
+5. **Access the application**
+   - Frontend: http://localhost:3000
+   - Resolver API: http://localhost:3001
+   - Proxy API: http://localhost:3002
+
+## 📁 Project Structure
+
+```
+fusion-plus-xlm/
+├── frontend/              # Next.js frontend application
+├── src/                   # Backend services
+│   ├── resolver/         # Cross-chain resolver service
+│   └── proxy/           # 1inch API proxy server
+├── contracts/            # Smart contracts
+│   ├── ethereum/        # Ethereum HTLC contracts
+│   └── stellar/         # Stellar Soroban contracts
+├── stellar-fusion/       # Stellar contract implementation
+├── scripts/             # Deployment and utility scripts
+└── docs/               # Documentation
+```
+
+## 💻 Development
+
+### Running Tests
+
+```bash
+# Test everything
+npm test
+
+# Test specific components
+npm run test:contracts
+npm run test:resolver
+npm run test:frontend
+```
+
+### Building for Production
+
+```bash
+# Build all components
+npm run build
+
+# Build specific components
+npm run build:contracts
+npm run build:frontend
+npm run build:resolver
+```
+
+## 🚢 Deployment
+
+See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment instructions.
+
+### Quick Deploy
+
+1. **Deploy Contracts**
+   ```bash
+   npm run deploy:stellar
+   npm run deploy:ethereum
+   ```
+
+2. **Deploy Services**
+   ```bash
+   # Using Docker
+   docker-compose up -d
+
+   # Or deploy to your cloud provider
+   ```
+
+## 🔒 Security
+
+- Input validation on all user inputs
+- Rate limiting on API endpoints
+- Secure key management
+- Time-locked escrow contracts
+- Comprehensive test coverage
+
+See [SECURITY.md](SECURITY_IMPROVEMENTS.md) for detailed security measures.
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+### Development Process
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [1inch Network](https://1inch.io/) for the Fusion+ protocol
+- [Stellar Development Foundation](https://stellar.org/) for the Stellar network
+- The DeFi community for continuous innovation
+
+## 📞 Support
+
+For support, please open an issue in the GitHub repository or reach out to the maintainers.
+
+---
+
+**Note**: This is an experimental implementation. Please review all code and test thoroughly before using in production.

@@ -15,12 +15,14 @@
     "resolver:dev": "tsx src/services/resolver/index.ts",
     "proxy": "node dist/proxy/server.js",
     "proxy:dev": "tsx src/proxy/server.ts",
+    "proxy:prod": "NODE_ENV=production node dist/proxy/server.js",
     "fork": "./scripts/1inch/run-fork.sh",
     "1inch:setup": "npx hardhat run scripts/1inch/setup-fork.ts --network hardhat"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^11.3.0",
     "ethers": "^6.15.0",
+    "express-rate-limit": "^8.0.1",
     "pg": "^8.16.3",
     "winston": "^3.17.0"
   },

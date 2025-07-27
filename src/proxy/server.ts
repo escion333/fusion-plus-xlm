@@ -1,6 +1,9 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import * as dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
+import { QuoteRequest, SwapRequest, ApiError, QuoteParams, SwapParams } from './types';
+import { validateQuoteParams, validateSwapParams, ValidationError, buildSafeUrl } from './validators';
 
 dotenv.config();
 
@@ -25,12 +28,113 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: '1inch-proxy' });
 });
 
-// 1inch API proxy configuration
+// Get chain ID from environment or default to Ethereum mainnet
+const CHAIN_ID = process.env.CHAIN_ID || '1';
+const API_VERSION = 'v6.0';
+
+// Rate limiting configuration
+const createRateLimiter = (windowMs: number, max: number, message: string) => {
+  return rateLimit({
+    windowMs,
+    max,
+    message,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+      const error: ApiError = {
+        error: 'Rate Limit Exceeded',
+        statusCode: 429,
+        description: message
+      };
+      res.status(429).json(error);
+    }
+  });
+};
+
+// Different rate limits for different endpoints
+const quoteLimiter = createRateLimiter(
+  60 * 1000, // 1 minute
+  30, // 30 requests per minute
+  'Too many quote requests. Please try again later.'
+);
+
+const swapLimiter = createRateLimiter(
+  60 * 1000, // 1 minute
+  10, // 10 swaps per minute
+  'Too many swap requests. Please try again later.'
+);
+
+const generalLimiter = createRateLimiter(
+  15 * 60 * 1000, // 15 minutes
+  100, // 100 requests per 15 minutes
+  'Too many requests. Please try again later.'
+);
+
+// Error handling middleware
+const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof ValidationError) {
+    const error: ApiError = {
+      error: 'Validation Error',
+      statusCode: 400,
+      description: err.message
+    };
+    return res.status(400).json(error);
+  }
+  
+  console.error('Proxy error:', err);
+  const error: ApiError = {
+    error: 'Internal Server Error',
+    statusCode: 500,
+    description: 'An unexpected error occurred'
+  };
+  res.status(500).json(error);
+};
+
+// Validation middleware for quote endpoints
+const validateQuote = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const validated = validateQuoteParams(req.query as Partial<QuoteParams>);
+    (req as QuoteRequest).query = validated;
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Validation middleware for swap endpoints
+const validateSwap = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const validated = validateSwapParams(req.query as Partial<SwapParams>);
+    (req as SwapRequest).query = validated;
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 1inch API proxy configuration for swap endpoints
 const oneinchApiProxy = createProxyMiddleware({
   target: 'https://api.1inch.dev',
   changeOrigin: true,
-  pathRewrite: {
-    '^/api/1inch': '', // Remove /api/1inch prefix
+  pathRewrite: (path: string, req: express.Request) => {
+    try {
+      const url = new URL(`http://dummy${path}`);
+      const params = new URLSearchParams(url.search);
+      
+      // Build safe path based on endpoint
+      if (path.includes('/quote')) {
+        return `/swap/${API_VERSION}/${CHAIN_ID}/quote?${params.toString()}`;
+      }
+      if (path.includes('/swap')) {
+        return `/swap/${API_VERSION}/${CHAIN_ID}/swap?${params.toString()}`;
+      }
+      
+      // Default path rewrite
+      return path.replace('/api/1inch', `/swap/${API_VERSION}/${CHAIN_ID}`);
+    } catch (error) {
+      console.error('Path rewrite error:', error);
+      return path;
+    }
   },
   on: {
     proxyReq: (proxyReq, req, res) => {
@@ -45,6 +149,9 @@ const oneinchApiProxy = createProxyMiddleware({
     proxyRes: (proxyRes, req, res) => {
       // Log response status
       console.log(`[1inch Proxy] Response: ${proxyRes.statusCode}`);
+      
+      // Add custom headers
+      proxyRes.headers['X-Proxy-By'] = '1inch-stellar-proxy';
     },
     error: (err, req, res) => {
       console.error('[1inch Proxy] Error:', err);
@@ -53,13 +160,36 @@ const oneinchApiProxy = createProxyMiddleware({
   },
 });
 
-// 1inch Fusion API proxy
+// Common path rewriting logic
+function rewriteFusionPath(path: string): string {
+  try {
+    const url = new URL(`http://dummy${path}`);
+    const params = new URLSearchParams(url.search);
+    
+    // For Fusion+, ensure fusion mode is enabled
+    if (path.includes('/quote')) {
+      if (!params.has('includeProtocols')) {
+        params.set('includeProtocols', 'ONEINCH_FUSION');
+      }
+      return `/swap/${API_VERSION}/${CHAIN_ID}/quote?${params.toString()}`;
+    }
+    
+    if (path.includes('/orders/create') || path.includes('/swap')) {
+      return `/swap/${API_VERSION}/${CHAIN_ID}/swap`;
+    }
+    
+    return path.replace('/api/fusion', `/swap/${API_VERSION}/${CHAIN_ID}`);
+  } catch (error) {
+    console.error('Fusion path rewrite error:', error);
+    return path;
+  }
+}
+
+// 1inch Fusion+ API proxy
 const fusionApiProxy = createProxyMiddleware({
-  target: 'https://fusion.1inch.io',
+  target: 'https://api.1inch.dev',
   changeOrigin: true,
-  pathRewrite: {
-    '^/api/fusion': '', // Remove /api/fusion prefix
-  },
+  pathRewrite: rewriteFusionPath,
   on: {
     proxyReq: (proxyReq, req, res) => {
       // Add API key if available
@@ -67,72 +197,107 @@ const fusionApiProxy = createProxyMiddleware({
         proxyReq.setHeader('Authorization', `Bearer ${process.env.ONEINCH_API_KEY}`);
       }
       
-      // Log request for debugging
+      // Add Fusion-specific headers
+      proxyReq.setHeader('X-1inch-Mode', 'fusion');
+      
+      // Log request
       console.log(`[Fusion Proxy] ${(req as any).method} ${(req as any).path} -> ${proxyReq.path}`);
     },
     proxyRes: (proxyRes, req, res) => {
-      // Log response status
       console.log(`[Fusion Proxy] Response: ${proxyRes.statusCode}`);
     },
     error: (err, req, res) => {
       console.error('[Fusion Proxy] Error:', err);
-      (res as any).status(500).json({ error: 'Proxy error', message: err.message });
+      (res as any).status(500).json({ error: 'Fusion proxy error', message: err.message });
     },
   },
 });
 
 // Mock endpoints for demo (when no API key is available)
-app.get('/api/mock/fusion/orders/active', (req, res) => {
+app.get('/api/mock/fusion/orders/active', (req: Request, res: Response) => {
   // Return mock active orders
   res.json({
     orders: [
       {
-        orderHash: '0x' + '1'.repeat(64),
-        maker: '0x' + '2'.repeat(40),
-        makerAsset: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
-        takerAsset: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH
-        makingAmount: '1000000000', // 1000 USDC
-        takingAmount: '500000000000000000', // 0.5 ETH
-        deadline: Math.floor(Date.now() / 1000) + 3600,
-        auctionStartTime: Math.floor(Date.now() / 1000),
-        auctionEndTime: Math.floor(Date.now() / 1000) + 600,
-        initialRateBump: 0,
-        status: 'open',
+        orderHash: '0x' + Math.random().toString(16).substring(2, 66),
+        status: 'active',
+        fromToken: 'ETH',
+        toToken: 'USDC',
+        fromAmount: '1000000000000000000',
+        toAmount: '3000000000',
+        createdAt: new Date(Date.now() - 300000).toISOString(),
+      },
+      {
+        orderHash: '0x' + Math.random().toString(16).substring(2, 66),
+        status: 'filled',
+        fromToken: 'USDC',
+        toToken: 'DAI',
+        fromAmount: '1000000000',
+        toAmount: '999500000000000000000',
+        createdAt: new Date(Date.now() - 600000).toISOString(),
       },
     ],
   });
 });
 
-app.post('/api/mock/fusion/orders/create', express.json(), (req, res) => {
+app.post('/api/mock/fusion/orders/create', express.json(), (req: Request, res: Response) => {
   // Return mock created order
   const order = req.body;
   res.json({
     success: true,
     order: {
       ...order,
-      orderHash: '0x' + Math.random().toString(16).substr(2, 64),
+      orderHash: '0x' + Math.random().toString(16).substring(2, 66),
       status: 'created',
       createdAt: new Date().toISOString(),
     },
   });
 });
 
-app.get('/api/mock/quote', (req, res) => {
+app.get('/api/mock/quote', validateQuote, (req: QuoteRequest, res: Response) => {
   // Return mock quote
   const { src, dst, amount } = req.query;
   res.json({
-    fromToken: src,
-    toToken: dst,
-    fromAmount: amount,
+    fromToken: {
+      symbol: 'ETH',
+      name: 'Ethereum',
+      decimals: 18,
+      address: src as string,
+    },
+    toToken: {
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+      address: dst as string,
+    },
+    fromAmount: amount as string,
     toAmount: (parseInt(amount as string) * 2).toString(), // Mock 2x rate
-    protocols: [['UNISWAP_V3']],
+    protocols: [
+      [
+        {
+          name: 'ONEINCH_FUSION',
+          part: 100,
+        }
+      ]
+    ],
     estimatedGas: '150000',
   });
 });
 
-// Mount proxy routes
+// Apply rate limiting to all routes
+app.use(generalLimiter);
+
+// Mount proxy routes with validation and specific rate limits
+app.use('/api/1inch/quote', quoteLimiter, validateQuote, oneinchApiProxy);
+app.use('/api/1inch/swap', swapLimiter, validateSwap, oneinchApiProxy);
 app.use('/api/1inch', oneinchApiProxy);
+
+app.use('/api/fusion/quote', quoteLimiter, validateQuote, fusionApiProxy);
+app.use('/api/fusion/swap', swapLimiter, validateSwap, fusionApiProxy);
 app.use('/api/fusion', fusionApiProxy);
+
+// Apply error handler
+app.use(errorHandler);
 
 // Start server
 app.listen(PORT, () => {

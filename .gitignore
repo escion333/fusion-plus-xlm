@@ -1,6 +1,3 @@
-# Documentation
-docs/
-
 # Dependencies
 node_modules/
 **/node_modules/
@@ -24,6 +21,9 @@ out/
 .env
 .env.local
 .env.*.local
+.env.mainnet
+.env.production
+.env.testnet
 
 # Logs
 logs/
@@ -57,4 +57,22 @@ temp/
 .turbo/
 
 # OS files
+.DS_Store
 Thumbs.db
+
+# Local configurations
+.stellar/
+.claude/
+*.local.json
+
+# Local scripts
+scripts/test-*.js
+scripts/setup-*.sh
+scripts/deploy-*.sh
+
+# Log files from dev
+frontend.log
+proxy.log
+
+# Verification files
+verification-checklist.md

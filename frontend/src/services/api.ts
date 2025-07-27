@@ -124,12 +124,33 @@ export class FusionAPI {
       const response = await fetch(`${PROXY_BASE_URL}/api/1inch/quote?${params}`);
       
       if (!response.ok) {
+        console.log('1inch API failed, falling back to mock quote');
         // Fall back to mock quote
         const mockResponse = await fetch(`${PROXY_BASE_URL}/api/mock/quote?${params}`);
-        return mockResponse.json();
+        const mockData = await mockResponse.json();
+        return {
+          fromToken: request.fromToken,
+          toToken: request.toToken,
+          fromAmount: request.amount,
+          toAmount: mockData.toAmount,
+          estimatedGas: mockData.estimatedGas,
+          protocols: mockData.protocols,
+          crossChain: request.fromChain !== request.toChain,
+          isMockData: true
+        };
       }
       
-      return response.json();
+      const data = await response.json();
+      return {
+        fromToken: request.fromToken,
+        toToken: request.toToken,
+        fromAmount: request.amount,
+        toAmount: data.dstAmount || data.toAmount,
+        estimatedGas: data.gas || data.estimatedGas || '150000',
+        protocols: data.protocols || [['ONEINCH_FUSION']],
+        crossChain: request.fromChain !== request.toChain,
+        isMockData: false
+      };
     } catch (error) {
       console.error('Failed to get quote:', error);
       throw error;
@@ -201,13 +222,14 @@ export class ResolverAPI {
 // Token addresses for different chains
 export const TOKEN_ADDRESSES = {
   ethereum: {
-    ETH: '0x0000000000000000000000000000000000000000',
+    ETH: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', // Native ETH identifier for 1inch
+    WETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // Wrapped ETH
     USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
     USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
     DAI: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
   },
   stellar: {
-    XLM: 'native',
+    XLM: '0x0000000000000000000000000000000000000000', // Use zero address for native
     USDC: 'USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
     // Add more Stellar assets as needed
   },
