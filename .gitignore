@@ -65,6 +65,9 @@ Thumbs.db
 .claude/
 *.local.json
 
+# Documentation (internal use only)
+docs/
+
 # Local scripts
 scripts/test-*.js
 scripts/setup-*.sh
