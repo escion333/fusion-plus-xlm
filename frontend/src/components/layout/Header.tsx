@@ -4,6 +4,7 @@ import React from 'react';
 import { useWallets } from '@/contexts/WalletContext';
 import { Button } from '@/components/ui/button';
 import { Wallet } from 'lucide-react';
+import { EthereumLogo, StellarLogo } from '@/components/icons/ChainLogos';
 
 export const Header: React.FC = () => {
   const { 
@@ -20,17 +21,14 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-neutral-700/50">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-neutral-900/80 backdrop-blur-sm">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-14">
           {/* Logo/Title */}
           <div className="flex items-center space-x-2">
-            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-brand-gradient">
-              Fusion+
+            <h1 className="text-lg font-medium text-neutral-0">
+              Fusion+ <span className="text-neutral-400">Extension</span>
             </h1>
-            <span className="text-xl font-bold text-white">
-              Extension
-            </span>
           </div>
 
           {/* Wallet Connection */}
@@ -39,13 +37,13 @@ export const Header: React.FC = () => {
               <div className="flex items-center space-x-2">
                 {/* Desktop view */}
                 <div className="hidden sm:flex items-center space-x-2 text-sm">
-                  <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-neutral-700/50 border border-neutral-500/20">
-                    <span className="text-neutral-100 text-xs">ETH:</span>
-                    <span className="font-mono text-xs text-neutral-0">{formatAddress(metamask.address)}</span>
+                  <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-neutral-800/50">
+                    <EthereumLogo className="w-4 h-4" />
+                    <span className="font-mono text-xs text-neutral-300">{formatAddress(metamask.address)}</span>
                   </div>
-                  <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-neutral-700/50 border border-neutral-500/20">
-                    <span className="text-neutral-100 text-xs">XLM:</span>
-                    <span className="font-mono text-xs text-neutral-0">{formatAddress(freighter.publicKey)}</span>
+                  <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-neutral-800/50">
+                    <StellarLogo className="w-4 h-4" />
+                    <span className="font-mono text-xs text-neutral-300">{formatAddress(freighter.publicKey)}</span>
                   </div>
                 </div>
                 {/* Mobile view - just show connected status */}
@@ -65,11 +63,10 @@ export const Header: React.FC = () => {
             ) : (
               <button
                 onClick={connectWallets}
-                className="btn-gradient flex items-center gap-2 text-sm"
+                className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm font-medium text-neutral-0 transition-colors flex items-center gap-2"
               >
                 <Wallet className="h-4 w-4" />
-                <span className="hidden sm:inline">Connect Wallets</span>
-                <span className="sm:hidden">Connect</span>
+                <span>Connect</span>
               </button>
             )}
           </div>

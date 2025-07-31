@@ -7,16 +7,21 @@
     "demo": "ts-node src/demo-simple.ts",
     "demo:mainnet": "ts-node src/demo-mainnet.ts",
     "demo:1inch": "ts-node src/demo-1inch-extension.ts",
+    "service": "ts-node src/service.ts",
     "build": "tsc",
     "test": "echo \"No tests yet\""
   },
   "dependencies": {
     "stellar-sdk": "^11.3.0",
     "ethers": "^6.13.2",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/express": "^4.17.17",
+    "@types/cors": "^2.8.13",
     "typescript": "^5.0.0",
     "ts-node": "^10.9.0"
   }

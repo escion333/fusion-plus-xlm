@@ -24,13 +24,13 @@ export function AmountInput({
   };
 
   return (
-    <Input
+    <input
       type="text"
       value={value}
       onChange={handleChange}
       placeholder={placeholder}
       disabled={disabled}
-      className="flex-1 text-xl font-medium"
+      className="flex-1 bg-transparent text-2xl font-medium text-neutral-0 placeholder:text-neutral-500 focus:outline-none disabled:opacity-50 px-3 py-2"
     />
   );
 }

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowDownIcon, Activity, TestTube } from "lucide-react";
+import { ArrowDownIcon, Activity } from "lucide-react";
 import { ethers } from "ethers";
 import { TokenSelector } from "./TokenSelector";
 import { AmountInput } from "./AmountInput";
@@ -157,33 +157,32 @@ export function SwapCard() {
       )}
       
       {/* Main swap card */}
-      <Card className={`glass-card w-full max-w-md mx-auto transition-opacity ${
+      <Card className={`bg-neutral-900/80 backdrop-blur-sm border-0 w-full max-w-md mx-auto transition-opacity ${
         swapState !== 'idle' ? 'opacity-50 pointer-events-none' : ''
       }`}>
-        <CardHeader className="border-b border-neutral-700/50">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl font-bold text-transparent bg-clip-text bg-brand-gradient">
-              1inch Fusion+
+            <CardTitle className="text-xl font-medium text-neutral-0">
+              Swap
             </CardTitle>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-700/50 border border-neutral-500/20">
-              <TestTube className={`h-4 w-4 ${isMockMode ? 'text-yellow-500' : 'text-neutral-100'}`} />
-              <span className="text-sm text-neutral-100">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-neutral-300">
                 {isMockMode ? 'Mock' : 'Live'}
               </span>
               <Switch
                 checked={!isMockMode}
                 onCheckedChange={(checked) => setIsMockMode(!checked)}
                 aria-label="Toggle between mock and live mode"
-                className="data-[state=checked]:bg-brand-primary"
+                className="data-[state=checked]:bg-brand-primary scale-75"
               />
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
         {/* From Section */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-neutral-100">From</span>
+            <span className="text-xs text-neutral-300 uppercase tracking-wide">From</span>
             <ChainSelector 
               chain={fromChain} 
               onChainChange={setFromChain}
@@ -193,7 +192,7 @@ export function SwapCard() {
             <AmountInput
               value={fromAmount}
               onChange={setFromAmount}
-              placeholder="0.0"
+              placeholder="0"
             />
             <TokenSelector
               token={fromToken}
@@ -202,7 +201,7 @@ export function SwapCard() {
             />
           </div>
           {isFullyConnected && (
-            <div className="text-xs text-neutral-100">
+            <div className="text-xs text-neutral-400">
               Balance: {balancesLoading ? 'Loading...' : (
                 fromChain === 'ethereum' 
                   ? (fromToken === 'ETH' ? `${parseFloat(ethBalance).toFixed(4)} ETH` : `${parseFloat(ethUSDCBalance).toFixed(2)} USDC`)
@@ -213,21 +212,21 @@ export function SwapCard() {
         </div>
 
         {/* Switch Button */}
-        <div className="flex justify-center">
+        <div className="flex justify-center -my-2">
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
-            className="rounded-full bg-neutral-700/50 border-neutral-500/20 hover:bg-neutral-700 hover:border-brand-primary/50"
+            className="rounded-full bg-neutral-800 hover:bg-neutral-700 w-8 h-8"
             onClick={switchChains}
           >
-            <ArrowDownIcon className="h-4 w-4 text-neutral-100" />
+            <ArrowDownIcon className="h-4 w-4 text-neutral-400" />
           </Button>
         </div>
 
         {/* To Section */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-neutral-100">To</span>
+            <span className="text-xs text-neutral-300 uppercase tracking-wide">To</span>
             <ChainSelector 
               chain={toChain} 
               onChainChange={setToChain}
@@ -237,7 +236,7 @@ export function SwapCard() {
             <AmountInput
               value={toAmount}
               onChange={setToAmount}
-              placeholder="0.0"
+              placeholder="0"
               disabled
             />
             <TokenSelector
@@ -247,7 +246,7 @@ export function SwapCard() {
             />
           </div>
           {isFullyConnected && (
-            <div className="text-xs text-neutral-100">
+            <div className="text-xs text-neutral-400">
               Balance: {balancesLoading ? 'Loading...' : (
                 toChain === 'ethereum' 
                   ? (toToken === 'ETH' ? `${parseFloat(ethBalance).toFixed(4)} ETH` : `${parseFloat(ethUSDCBalance).toFixed(2)} USDC`)
@@ -258,34 +257,20 @@ export function SwapCard() {
         </div>
 
         {/* Swap Details */}
-        <div className="border-t border-neutral-700/50 pt-4 space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-neutral-100">Rate</span>
-            <span>
-              {quote && fromAmount && parseFloat(fromAmount) > 0
-                ? `1 ${fromToken} = ${(parseFloat(toAmount) / parseFloat(fromAmount)).toFixed(4)} ${toToken}`
-                : `1 ${fromToken} = -- ${toToken}`}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-neutral-100">Estimated Time</span>
-            <span>~5 minutes</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-neutral-100">Network Fee</span>
-            <span>{quote?.estimatedGas ? `~${ethers.formatUnits(quote.estimatedGas, 'gwei')} Gwei` : '--'}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-neutral-100">Protocol</span>
-            <span className="text-brand-primary">1inch Fusion+</span>
-          </div>
-          {(quote?.isMockData || isMockMode) && (
-            <div className="flex justify-between">
-              <span className="text-neutral-100">Data Source</span>
-              <span className="text-yellow-500 text-xs">Mock Data (Demo Mode)</span>
+        {quote && fromAmount && parseFloat(fromAmount) > 0 && (
+          <div className="bg-neutral-800/50 rounded-lg p-3 space-y-2">
+            <div className="flex justify-between text-xs">
+              <span className="text-neutral-400">Rate</span>
+              <span className="text-neutral-200">
+                1 {fromToken} = {(parseFloat(toAmount) / parseFloat(fromAmount)).toFixed(4)} {toToken}
+              </span>
             </div>
-          )}
-        </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-neutral-400">Network Fee</span>
+              <span className="text-neutral-200">{quote?.estimatedGas ? `~${ethers.formatUnits(quote.estimatedGas, 'gwei')} Gwei` : '--'}</span>
+            </div>
+          </div>
+        )}
 
         {/* Error Display */}
         {error && (
@@ -339,10 +324,10 @@ export function SwapCard() {
         {/* Swap Button */}
         <button 
           onClick={handleSwap}
-          className="btn-gradient w-full py-4 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3 rounded-lg bg-brand-primary hover:bg-brand-primary/90 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={(!fromAmount || parseFloat(fromAmount) <= 0) || isLoading || !isFullyConnected}
         >
-          {isLoading ? "Processing..." : !isFullyConnected ? "Connect Wallets First" : "Create 1inch Order"}
+          {isLoading ? "Processing..." : !isFullyConnected ? "Connect Wallets" : "Swap"}
         </button>
       </CardContent>
     </Card>

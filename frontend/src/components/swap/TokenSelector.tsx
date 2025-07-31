@@ -7,22 +7,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ETHLogo, XLMLogo, USDCLogo, USDTLogo } from "@/components/icons/TokenLogos";
 
 interface Token {
   symbol: string;
   name: string;
-  icon: string;
+  icon: React.ReactNode;
 }
 
 const ETHEREUM_TOKENS: Token[] = [
-  { symbol: "ETH", name: "Ethereum", icon: "Ξ" },
-  { symbol: "USDC", name: "USD Coin", icon: "$" },
-  { symbol: "USDT", name: "Tether", icon: "₮" },
+  { symbol: "ETH", name: "Ethereum", icon: <ETHLogo className="w-5 h-5" /> },
+  { symbol: "USDC", name: "USD Coin", icon: <USDCLogo className="w-5 h-5" /> },
+  { symbol: "USDT", name: "Tether", icon: <USDTLogo className="w-5 h-5" /> },
 ];
 
 const STELLAR_TOKENS: Token[] = [
-  { symbol: "XLM", name: "Stellar Lumens", icon: "*" },
-  { symbol: "USDC", name: "USD Coin", icon: "$" },
+  { symbol: "XLM", name: "Stellar Lumens", icon: <XLMLogo className="w-5 h-5" /> },
+  { symbol: "USDC", name: "USD Coin", icon: <USDCLogo className="w-5 h-5" /> },
 ];
 
 interface TokenSelectorProps {
@@ -39,9 +40,7 @@ export function TokenSelector({ token, onTokenChange, chain }: TokenSelectorProp
       <SelectTrigger className="w-[140px]">
         <SelectValue>
           <div className="flex items-center space-x-2">
-            <span className="text-lg">
-              {tokens.find(t => t.symbol === token)?.icon}
-            </span>
+            {tokens.find(t => t.symbol === token)?.icon}
             <span>{token}</span>
           </div>
         </SelectValue>
@@ -50,7 +49,7 @@ export function TokenSelector({ token, onTokenChange, chain }: TokenSelectorProp
         {tokens.map((t) => (
           <SelectItem key={t.symbol} value={t.symbol}>
             <div className="flex items-center space-x-2">
-              <span className="text-lg">{t.icon}</span>
+              {t.icon}
               <div>
                 <div className="font-medium">{t.symbol}</div>
                 <div className="text-xs text-neutral-100">{t.name}</div>

@@ -94,7 +94,7 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
   const Icon = config.icon;
 
   return (
-    <Card className="w-full relative glass-card">
+    <Card className="w-full relative bg-neutral-900/80 backdrop-blur-sm border-0">
       <CardContent className="p-6">
         {/* Close button */}
         {onClose && (
@@ -118,14 +118,14 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
               }`} 
             />
             <div>
-              <h3 className="font-semibold text-lg">{config.title}</h3>
-              <p className="text-sm text-neutral-100">{config.description}</p>
+              <h3 className="font-medium text-lg text-neutral-0">{config.title}</h3>
+              <p className="text-sm text-neutral-300">{config.description}</p>
             </div>
           </div>
           {(status === 'pending' || status === 'processing') && (
             <div className="text-right">
-              <div className="text-2xl font-mono font-semibold">{formatTime(timeRemaining)}</div>
-              <div className="text-xs text-muted-foreground">estimated time</div>
+              <div className="text-2xl font-mono font-medium text-neutral-0">{formatTime(timeRemaining)}</div>
+              <div className="text-xs text-neutral-400">estimated time</div>
             </div>
           )}
         </div>
@@ -158,7 +158,7 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
                   )}
                 </div>
                 <span className={`text-xs mt-1 ${
-                  index <= currentStep ? 'text-neutral-0' : 'text-neutral-100'
+                  index <= currentStep ? 'text-neutral-0' : 'text-neutral-400'
                 }`}>
                   {step.label}
                 </span>
@@ -169,22 +169,22 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
 
         {/* Order Details */}
         {orderHash && (
-          <div className="bg-neutral-700/50 rounded-xl p-3 mb-4 space-y-2 border border-neutral-500/20">
+          <div className="bg-neutral-800/50 rounded-lg p-3 mb-4 space-y-2">
             <div>
-              <div className="text-xs text-neutral-100 mb-1">Order Hash</div>
-              <div className="font-mono text-xs break-all">{orderHash}</div>
+              <div className="text-xs text-neutral-400 mb-1">Order Hash</div>
+              <div className="font-mono text-xs break-all text-neutral-200">{orderHash}</div>
             </div>
             
             {orderDetails?.resolver && (
               <div>
-                <div className="text-xs text-neutral-100 mb-1">Resolver</div>
-                <div className="font-mono text-xs">{orderDetails.resolver.slice(0, 10)}...{orderDetails.resolver.slice(-8)}</div>
+                <div className="text-xs text-neutral-400 mb-1">Resolver</div>
+                <div className="font-mono text-xs text-neutral-200">{orderDetails.resolver.slice(0, 10)}...{orderDetails.resolver.slice(-8)}</div>
               </div>
             )}
             
             {orderDetails?.escrowAddresses && (
               <div>
-                <div className="text-xs text-neutral-100 mb-1">Escrow Contracts</div>
+                <div className="text-xs text-neutral-400 mb-1">Escrow Contracts</div>
                 <div className="text-xs space-y-1">
                   <div>Source: {orderDetails.escrowAddresses.source.slice(0, 10)}...{orderDetails.escrowAddresses.source.slice(-8)}</div>
                   <div>Dest: {orderDetails.escrowAddresses.destination.slice(0, 10)}...{orderDetails.escrowAddresses.destination.slice(-8)}</div>
@@ -194,7 +194,7 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
             
             {orderDetails?.txHashes && (
               <div>
-                <div className="text-xs text-neutral-100 mb-1">Transaction Hashes</div>
+                <div className="text-xs text-neutral-400 mb-1">Transaction Hashes</div>
                 <div className="text-xs space-y-1">
                   <div>Source: {orderDetails.txHashes.source.slice(0, 10)}...{orderDetails.txHashes.source.slice(-8)}</div>
                   <div>Dest: {orderDetails.txHashes.destination.slice(0, 10)}...{orderDetails.txHashes.destination.slice(-8)}</div>

@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import * as dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
+import fetch from 'node-fetch';
 import { QuoteRequest, SwapRequest, ApiError, QuoteParams, SwapParams } from './types';
 import { validateQuoteParams, validateSwapParams, ValidationError, buildSafeUrl } from './validators';
 
@@ -330,9 +331,42 @@ app.get('/api/mock/fusion/orders/:orderHash', (req: Request, res: Response) => {
 });
 
 // Add handler for direct fusion/orders/create endpoint
-app.post('/api/fusion/orders/create', express.json(), (req: Request, res: Response) => {
-  // In production, this would forward to real 1inch API
-  // For now, forward to mock endpoint
+app.post('/api/fusion/orders/create', express.json(), async (req: Request, res: Response) => {
+  // Check if this is a Stellar cross-chain order
+  const order = req.body;
+  const isStellarOrder = 
+    order.crossChain?.destinationChain === 'stellar' ||
+    (order.crossChain?.enabled && order.crossChain?.stellarReceiver);
+  
+  if (isStellarOrder) {
+    try {
+      // Forward to our extended resolver service
+      const extendedResolverUrl = process.env.EXTENDED_RESOLVER_URL || 'http://localhost:3003';
+      const response = await fetch(`${extendedResolverUrl}/api/orders/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order,
+          signature: '',
+          srcChainId: 1,
+          dstChainId: 1001,
+        }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        return res.json({
+          orderHash: result.orderId,
+          status: 'processing',
+          ...order,
+        });
+      }
+    } catch (error) {
+      console.error('Extended resolver error:', error);
+    }
+  }
+  
+  // For non-Stellar orders, forward to mock endpoint
   req.url = '/api/mock/fusion/orders/create';
   app.handle(req, res);
 });
