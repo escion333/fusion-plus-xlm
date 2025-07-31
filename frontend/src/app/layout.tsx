@@ -10,7 +10,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Fusion+ | Institutional DeFi Infrastructure",
+  title: "Stellar Extension",
   description: "Institutional-grade cross-chain liquidity protocol powered by 1inch Fusion+",
 };
 

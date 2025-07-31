@@ -53,7 +53,7 @@ export function TokenSelector({ token, onTokenChange, chain }: TokenSelectorProp
               <span className="text-lg">{t.icon}</span>
               <div>
                 <div className="font-medium">{t.symbol}</div>
-                <div className="text-xs text-muted-foreground">{t.name}</div>
+                <div className="text-xs text-neutral-100">{t.name}</div>
               </div>
             </div>
           </SelectItem>

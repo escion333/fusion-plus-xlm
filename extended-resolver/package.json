@@ -6,6 +6,7 @@
   "scripts": {
     "demo": "ts-node src/demo-simple.ts",
     "demo:mainnet": "ts-node src/demo-mainnet.ts",
+    "demo:1inch": "ts-node src/demo-1inch-extension.ts",
     "build": "tsc",
     "test": "echo \"No tests yet\""
   },

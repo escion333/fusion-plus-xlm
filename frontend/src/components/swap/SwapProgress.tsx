@@ -27,31 +27,31 @@ const statusConfig = {
     title: 'Creating Order',
     description: 'Preparing your cross-chain swap...',
     icon: Loader2,
-    color: 'text-blue-600',
+    color: 'text-brand-secondary',
   },
   pending: {
     title: 'Order Submitted',
     description: 'Waiting for resolver to claim...',
     icon: Clock,
-    color: 'text-yellow-600',
+    color: 'text-yellow-500',
   },
   processing: {
     title: 'Swap in Progress',
     description: 'Resolver is executing your swap...',
     icon: Loader2,
-    color: 'text-purple-600',
+    color: 'text-brand-primary',
   },
   completed: {
     title: 'Swap Completed!',
     description: 'Your tokens have been transferred.',
     icon: CheckCircle2,
-    color: 'text-green-600',
+    color: 'text-green-500',
   },
   failed: {
     title: 'Swap Failed',
     description: 'Something went wrong with your swap.',
     icon: XCircle,
-    color: 'text-red-600',
+    color: 'text-red-500',
   },
 };
 
@@ -94,7 +94,7 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
   const Icon = config.icon;
 
   return (
-    <Card className="w-full relative">
+    <Card className="w-full relative glass-card">
       <CardContent className="p-6">
         {/* Close button */}
         {onClose && (
@@ -119,7 +119,7 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
             />
             <div>
               <h3 className="font-semibold text-lg">{config.title}</h3>
-              <p className="text-sm text-muted-foreground">{config.description}</p>
+              <p className="text-sm text-neutral-100">{config.description}</p>
             </div>
           </div>
           {(status === 'pending' || status === 'processing') && (
@@ -137,28 +137,28 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
               <div key={step.id} className="flex flex-col items-center flex-1">
                 <div className="relative">
                   {index < currentStep ? (
-                    <CheckCircle2 className="w-6 h-6 text-green-600" />
+                    <CheckCircle2 className="w-6 h-6 text-green-500" />
                   ) : index === currentStep ? (
                     <div className="relative">
-                      <Circle className="w-6 h-6 text-blue-600" />
+                      <Circle className="w-6 h-6 text-brand-primary" />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-3 h-3 bg-blue-600 rounded-full animate-pulse" />
+                        <div className="w-3 h-3 bg-brand-primary rounded-full animate-pulse" />
                       </div>
                     </div>
                   ) : (
-                    <Circle className="w-6 h-6 text-gray-300" />
+                    <Circle className="w-6 h-6 text-neutral-500" />
                   )}
                   {index < steps.length - 1 && (
                     <div
                       className={`absolute left-6 top-3 h-0.5 w-full ${
-                        index < currentStep ? 'bg-green-600' : 'bg-gray-300'
+                        index < currentStep ? 'bg-green-500' : 'bg-neutral-500'
                       }`}
                       style={{ width: 'calc(100% + 24px)' }}
                     />
                   )}
                 </div>
                 <span className={`text-xs mt-1 ${
-                  index <= currentStep ? 'text-foreground' : 'text-muted-foreground'
+                  index <= currentStep ? 'text-neutral-0' : 'text-neutral-100'
                 }`}>
                   {step.label}
                 </span>
@@ -169,22 +169,22 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
 
         {/* Order Details */}
         {orderHash && (
-          <div className="bg-muted/50 rounded-lg p-3 mb-4 space-y-2">
+          <div className="bg-neutral-700/50 rounded-xl p-3 mb-4 space-y-2 border border-neutral-500/20">
             <div>
-              <div className="text-xs text-muted-foreground mb-1">Order Hash</div>
+              <div className="text-xs text-neutral-100 mb-1">Order Hash</div>
               <div className="font-mono text-xs break-all">{orderHash}</div>
             </div>
             
             {orderDetails?.resolver && (
               <div>
-                <div className="text-xs text-muted-foreground mb-1">Resolver</div>
+                <div className="text-xs text-neutral-100 mb-1">Resolver</div>
                 <div className="font-mono text-xs">{orderDetails.resolver.slice(0, 10)}...{orderDetails.resolver.slice(-8)}</div>
               </div>
             )}
             
             {orderDetails?.escrowAddresses && (
               <div>
-                <div className="text-xs text-muted-foreground mb-1">Escrow Contracts</div>
+                <div className="text-xs text-neutral-100 mb-1">Escrow Contracts</div>
                 <div className="text-xs space-y-1">
                   <div>Source: {orderDetails.escrowAddresses.source.slice(0, 10)}...{orderDetails.escrowAddresses.source.slice(-8)}</div>
                   <div>Dest: {orderDetails.escrowAddresses.destination.slice(0, 10)}...{orderDetails.escrowAddresses.destination.slice(-8)}</div>
@@ -194,7 +194,7 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
             
             {orderDetails?.txHashes && (
               <div>
-                <div className="text-xs text-muted-foreground mb-1">Transaction Hashes</div>
+                <div className="text-xs text-neutral-100 mb-1">Transaction Hashes</div>
                 <div className="text-xs space-y-1">
                   <div>Source: {orderDetails.txHashes.source.slice(0, 10)}...{orderDetails.txHashes.source.slice(-8)}</div>
                   <div>Dest: {orderDetails.txHashes.destination.slice(0, 10)}...{orderDetails.txHashes.destination.slice(-8)}</div>
@@ -206,31 +206,31 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
 
         {/* Error Message */}
         {error && status === 'failed' && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <div className="text-sm text-red-800">{error}</div>
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+            <div className="text-sm text-red-400">{error}</div>
           </div>
         )}
 
         {/* Helpful Tips */}
         {status === 'pending' && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="text-sm text-blue-800">
+          <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-xl p-3">
+            <div className="text-sm text-brand-primary">
               💡 Your order is waiting for a resolver to claim it. This typically takes 10-30 seconds.
             </div>
           </div>
         )}
 
         {status === 'processing' && (
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-            <div className="text-sm text-purple-800">
+          <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-xl p-3">
+            <div className="text-sm text-brand-primary">
               🔄 Your swap is being executed across both chains. Do not close this window.
             </div>
           </div>
         )}
 
         {status === 'completed' && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <div className="text-sm text-green-800">
+          <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3">
+            <div className="text-sm text-green-400">
               ✅ Success! Your tokens have been transferred. Check your destination wallet.
             </div>
           </div>

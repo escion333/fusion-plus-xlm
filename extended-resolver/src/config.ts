@@ -1,12 +1,12 @@
-import Sdk from '@1inch/cross-chain-sdk';
-
-// Define Stellar chain ID (not in SDK yet)
+// Chain IDs
+export const ETHEREUM_CHAIN_ID = 1;
+export const BSC_CHAIN_ID = 56;
 export const STELLAR_CHAIN_ID = 1001; // Custom ID for Stellar
 
 export const config = {
     chain: {
         source: {
-            chainId: Sdk.NetworkEnum.ETHEREUM,
+            chainId: ETHEREUM_CHAIN_ID,
             url: process.env.SRC_CHAIN_RPC || 'https://eth.merkle.io',
             createFork: true,
             limitOrderProtocol: '0x111111125421ca6dc452d289314280a0f8842a65',

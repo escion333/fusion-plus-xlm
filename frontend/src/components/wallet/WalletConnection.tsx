@@ -51,17 +51,17 @@ export const WalletConnection: React.FC = () => {
     });
     
     return (
-      <Card className="mb-4">
+      <Card className="mb-4 glass-card">
         <CardContent className="pt-6">
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500">Ethereum:</span>
+              <span className="text-sm text-neutral-100">Ethereum:</span>
               <span className="text-sm font-mono">
                 {metamask.address && formatAddress(metamask.address)}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500">Stellar:</span>
+              <span className="text-sm text-neutral-100">Stellar:</span>
               <span className="text-sm font-mono">
                 {freighter.publicKey && formatAddress(freighter.publicKey)}
               </span>
@@ -82,31 +82,31 @@ export const WalletConnection: React.FC = () => {
 
   return (
     <>
-      <Card className="mb-4">
+      <Card className="mb-4 glass-card">
         <CardContent className="pt-6">
         <div className="space-y-4">
           <div className="text-center">
-            <h3 className="text-lg font-semibold mb-2">Connect Your Wallets</h3>
-            <p className="text-sm text-gray-500 mb-4">
+            <h3 className="text-lg font-semibold mb-2 text-neutral-0">Connect Your Wallets</h3>
+            <p className="text-sm text-neutral-100 mb-4">
               You need to connect both EVM and Stellar wallets to perform cross-chain swaps
             </p>
           </div>
           
           <div className="space-y-2">
-            <div className="flex items-center justify-between p-2 rounded border">
+            <div className="flex items-center justify-between p-2 rounded-xl border border-neutral-500/20 bg-neutral-700/50">
               <span className="text-sm">
                 EVM Wallet {metamask.isConnected ? '✓' : ''}
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-neutral-100">
                 {metamask.isConnected ? 'Connected' : 'Not connected'}
               </span>
             </div>
             
-            <div className="flex items-center justify-between p-2 rounded border">
+            <div className="flex items-center justify-between p-2 rounded-xl border border-neutral-500/20 bg-neutral-700/50">
               <span className="text-sm">
                 Freighter {freighter.isConnected ? '✓' : ''}
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-neutral-100">
                 {freighter.isConnected ? 'Connected' : 'Not connected'}
               </span>
             </div>
@@ -136,14 +136,14 @@ export const WalletConnection: React.FC = () => {
               >
                 Connect Freighter Manually
               </Button>
-              <p className="text-xs text-gray-500 text-center mt-2">
+              <p className="text-xs text-neutral-100 text-center mt-2">
                 Make sure Freighter is unlocked before connecting
               </p>
             </>
           )}
 
           {!isFullyConnected && (metamask.isConnected || freighter.isConnected) && (
-            <p className="text-xs text-center text-yellow-600">
+            <p className="text-xs text-center text-yellow-500">
               Please connect both wallets to continue
             </p>
           )}
