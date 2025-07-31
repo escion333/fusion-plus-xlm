@@ -157,23 +157,24 @@ export function SwapCard() {
       )}
       
       {/* Main swap card */}
-      <Card className={`w-full max-w-md mx-auto transition-opacity ${
+      <Card className={`glass-card w-full max-w-md mx-auto transition-opacity ${
         swapState !== 'idle' ? 'opacity-50 pointer-events-none' : ''
       }`}>
-        <CardHeader>
+        <CardHeader className="border-b border-neutral-700/50">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl font-bold">
+            <CardTitle className="text-2xl font-bold text-transparent bg-clip-text bg-brand-gradient">
               1inch Fusion+
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <TestTube className={`h-4 w-4 ${isMockMode ? 'text-yellow-600' : 'text-muted-foreground'}`} />
-              <span className="text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-700/50 border border-neutral-500/20">
+              <TestTube className={`h-4 w-4 ${isMockMode ? 'text-yellow-500' : 'text-neutral-100'}`} />
+              <span className="text-sm text-neutral-100">
                 {isMockMode ? 'Mock' : 'Live'}
               </span>
               <Switch
                 checked={!isMockMode}
                 onCheckedChange={(checked) => setIsMockMode(!checked)}
                 aria-label="Toggle between mock and live mode"
+                className="data-[state=checked]:bg-brand-primary"
               />
             </div>
           </div>
@@ -182,7 +183,7 @@ export function SwapCard() {
         {/* From Section */}
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">From</span>
+            <span className="text-sm text-neutral-100">From</span>
             <ChainSelector 
               chain={fromChain} 
               onChainChange={setFromChain}
@@ -201,7 +202,7 @@ export function SwapCard() {
             />
           </div>
           {isFullyConnected && (
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-neutral-100">
               Balance: {balancesLoading ? 'Loading...' : (
                 fromChain === 'ethereum' 
                   ? (fromToken === 'ETH' ? `${parseFloat(ethBalance).toFixed(4)} ETH` : `${parseFloat(ethUSDCBalance).toFixed(2)} USDC`)
@@ -216,17 +217,17 @@ export function SwapCard() {
           <Button
             variant="outline"
             size="icon"
-            className="rounded-full"
+            className="rounded-full bg-neutral-700/50 border-neutral-500/20 hover:bg-neutral-700 hover:border-brand-primary/50"
             onClick={switchChains}
           >
-            <ArrowDownIcon className="h-4 w-4" />
+            <ArrowDownIcon className="h-4 w-4 text-neutral-100" />
           </Button>
         </div>
 
         {/* To Section */}
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">To</span>
+            <span className="text-sm text-neutral-100">To</span>
             <ChainSelector 
               chain={toChain} 
               onChainChange={setToChain}
@@ -246,7 +247,7 @@ export function SwapCard() {
             />
           </div>
           {isFullyConnected && (
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-neutral-100">
               Balance: {balancesLoading ? 'Loading...' : (
                 toChain === 'ethereum' 
                   ? (toToken === 'ETH' ? `${parseFloat(ethBalance).toFixed(4)} ETH` : `${parseFloat(ethUSDCBalance).toFixed(2)} USDC`)
@@ -257,9 +258,9 @@ export function SwapCard() {
         </div>
 
         {/* Swap Details */}
-        <div className="border-t pt-4 space-y-2 text-sm">
+        <div className="border-t border-neutral-700/50 pt-4 space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Rate</span>
+            <span className="text-neutral-100">Rate</span>
             <span>
               {quote && fromAmount && parseFloat(fromAmount) > 0
                 ? `1 ${fromToken} = ${(parseFloat(toAmount) / parseFloat(fromAmount)).toFixed(4)} ${toToken}`
@@ -267,49 +268,50 @@ export function SwapCard() {
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Estimated Time</span>
+            <span className="text-neutral-100">Estimated Time</span>
             <span>~5 minutes</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Network Fee</span>
+            <span className="text-neutral-100">Network Fee</span>
             <span>{quote?.estimatedGas ? `~${ethers.formatUnits(quote.estimatedGas, 'gwei')} Gwei` : '--'}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Protocol</span>
-            <span className="text-blue-600">1inch Fusion+</span>
+            <span className="text-neutral-100">Protocol</span>
+            <span className="text-brand-primary">1inch Fusion+</span>
           </div>
           {(quote?.isMockData || isMockMode) && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Data Source</span>
-              <span className="text-yellow-600 text-xs">Mock Data (Demo Mode)</span>
+              <span className="text-neutral-100">Data Source</span>
+              <span className="text-yellow-500 text-xs">Mock Data (Demo Mode)</span>
             </div>
           )}
         </div>
 
         {/* Error Display */}
         {error && (
-          <div className="text-red-600 text-sm p-2 border border-red-200 rounded bg-red-50">
+          <div className="text-red-400 text-sm p-3 border border-red-500/20 rounded-xl bg-red-500/10">
             {error}
           </div>
         )}
 
         {/* Swap Status */}
         {currentSwapId && swapStatus && (
-          <div className="text-sm p-2 border rounded bg-blue-50">
-            <div className="font-medium">Swap ID: {currentSwapId.slice(0, 8)}...</div>
-            <div className="text-muted-foreground">Status: {swapStatus}</div>
+          <div className="text-sm p-3 border border-brand-primary/20 rounded-xl bg-brand-primary/10">
+            <div className="font-medium text-neutral-0">Swap ID: {currentSwapId.slice(0, 8)}...</div>
+            <div className="text-neutral-100">Status: {swapStatus}</div>
           </div>
         )}
 
         {/* Active Orders */}
         {activeOrders.length > 0 && (
-          <div className="border-t pt-4 space-y-2">
+          <div className="border-t border-neutral-700/50 pt-4 space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium">Active Orders</span>
+              <span className="text-sm font-medium text-neutral-0">Active Orders</span>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowActiveOrders(!showActiveOrders)}
+                className="text-neutral-100 hover:text-neutral-0 hover:bg-neutral-700/50"
               >
                 <Activity className="h-4 w-4 mr-1" />
                 {activeOrders.length}
@@ -318,14 +320,14 @@ export function SwapCard() {
             {showActiveOrders && (
               <div className="space-y-2">
                 {activeOrders.slice(0, 3).map((order: any) => (
-                  <div key={order.orderHash} className="text-xs p-2 border rounded">
+                  <div key={order.orderHash} className="text-xs p-3 border border-neutral-700/50 rounded-xl bg-neutral-700/30">
                     <div className="flex justify-between">
-                      <span>Order ID:</span>
-                      <span className="font-mono">{order.orderHash.slice(0, 10)}...</span>
+                      <span className="text-neutral-100">Order ID:</span>
+                      <span className="font-mono text-neutral-0">{order.orderHash.slice(0, 10)}...</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Status:</span>
-                      <span className="text-green-600">{order.status}</span>
+                      <span className="text-neutral-100">Status:</span>
+                      <span className="text-brand-secondary">{order.status}</span>
                     </div>
                   </div>
                 ))}
@@ -335,14 +337,13 @@ export function SwapCard() {
         )}
 
         {/* Swap Button */}
-        <Button 
+        <button 
           onClick={handleSwap}
-          className="w-full"
-          size="lg"
+          className="btn-gradient w-full py-4 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={(!fromAmount || parseFloat(fromAmount) <= 0) || isLoading || !isFullyConnected}
         >
           {isLoading ? "Processing..." : !isFullyConnected ? "Connect Wallets First" : "Create 1inch Order"}
-        </Button>
+        </button>
       </CardContent>
     </Card>
     </>

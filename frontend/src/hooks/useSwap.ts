@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { ethers } from 'ethers';
 import { FusionAPI, getTokenAddress } from '@/services/api';
 import { useWallets } from '@/contexts/WalletContext';
 

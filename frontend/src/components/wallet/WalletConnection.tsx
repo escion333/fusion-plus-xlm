@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useWallets } from '@/contexts/WalletContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,12 +15,11 @@ export const WalletConnection: React.FC = () => {
     metamask, 
     freighter, 
     connectWallets, 
-    connectEvmWallet,
     disconnectWallets, 
-    isFullyConnected,
-    showWalletSelector,
-    setShowWalletSelector 
+    isFullyConnected
   } = useWallets();
+  
+  const [showWalletSelector, setShowWalletSelector] = useState(false);
 
   // Connect Freighter after EVM wallet is connected
   React.useEffect(() => {
@@ -155,7 +154,14 @@ export const WalletConnection: React.FC = () => {
     <WalletSelector
       isOpen={showWalletSelector}
       onClose={() => setShowWalletSelector(false)}
-      onSelectWallet={connectEvmWallet}
+      onSelectWallet={async (walletId: string) => {
+        try {
+          await metamask.connect(walletId as any);
+          setShowWalletSelector(false);
+        } catch (error) {
+          console.error('Failed to connect wallet:', error);
+        }
+      }}
     />
     </>
   );

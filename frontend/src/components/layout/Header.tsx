@@ -20,12 +20,17 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
+    <header className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-neutral-700/50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo/Title */}
           <div className="flex items-center space-x-2">
-            <h1 className="text-xl font-bold">Stellar Fusion+</h1>
+            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-brand-gradient">
+              Fusion+
+            </h1>
+            <span className="text-xl font-bold text-white">
+              Extension
+            </span>
           </div>
 
           {/* Wallet Connection */}
@@ -34,39 +39,38 @@ export const Header: React.FC = () => {
               <div className="flex items-center space-x-2">
                 {/* Desktop view */}
                 <div className="hidden sm:flex items-center space-x-2 text-sm">
-                  <div className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50">
-                    <span className="text-muted-foreground text-xs">ETH:</span>
-                    <span className="font-mono text-xs">{formatAddress(metamask.address)}</span>
+                  <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-neutral-700/50 border border-neutral-500/20">
+                    <span className="text-neutral-100 text-xs">ETH:</span>
+                    <span className="font-mono text-xs text-neutral-0">{formatAddress(metamask.address)}</span>
                   </div>
-                  <div className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50">
-                    <span className="text-muted-foreground text-xs">XLM:</span>
-                    <span className="font-mono text-xs">{formatAddress(freighter.publicKey)}</span>
+                  <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-neutral-700/50 border border-neutral-500/20">
+                    <span className="text-neutral-100 text-xs">XLM:</span>
+                    <span className="font-mono text-xs text-neutral-0">{formatAddress(freighter.publicKey)}</span>
                   </div>
                 </div>
                 {/* Mobile view - just show connected status */}
-                <div className="flex sm:hidden items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-xs">Connected</span>
+                <div className="flex sm:hidden items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-neutral-700/50 border border-neutral-500/20">
+                  <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse"></div>
+                  <span className="text-xs text-neutral-0">Connected</span>
                 </div>
                 <Button
                   onClick={disconnectWallets}
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-2"
+                  className="h-8 px-2 text-neutral-100 hover:text-neutral-0 hover:bg-neutral-700/50"
                 >
                   <Wallet className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
-              <Button
+              <button
                 onClick={connectWallets}
-                size="sm"
-                className="flex items-center gap-2"
+                className="btn-gradient flex items-center gap-2 text-sm"
               >
                 <Wallet className="h-4 w-4" />
                 <span className="hidden sm:inline">Connect Wallets</span>
                 <span className="sm:hidden">Connect</span>
-              </Button>
+              </button>
             )}
           </div>
         </div>

@@ -1,22 +1,17 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 import { WalletProvider } from "@/contexts/WalletContext";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
+const manrope = Manrope({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-manrope",
 });
 
 export const metadata: Metadata = {
-  title: "Stellar Fusion+ | Cross-Chain Swaps",
-  description: "Trustless cross-chain swaps between Ethereum and Stellar",
+  title: "Fusion+ | Institutional DeFi Infrastructure",
+  description: "Institutional-grade cross-chain liquidity protocol powered by 1inch Fusion+",
 };
 
 export default function RootLayout({
@@ -27,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${manrope.variable} font-sans antialiased`}
       >
         <WalletProvider>
           {children}

@@ -9,7 +9,26 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: ['var(--font-manrope)', 'system-ui', 'sans-serif'],
+  		},
   		colors: {
+  			// Brand Colors (Purple Spectrum)
+  			brand: {
+  				primary: '#8229FF',
+  				secondary: '#B580FF',
+  				tertiary: '#E1CCFF',
+  			},
+  			// Neutral Colors (Grayscale for dark mode)
+  			neutral: {
+  				900: '#15181A',
+  				700: '#222529',
+  				500: '#383B3E',
+  				300: '#6F7174',
+  				100: '#9C9D9F',
+  				0: '#FFFFFF',
+  			},
+  			// Keep existing color system for compatibility
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
@@ -51,10 +70,15 @@ const config: Config = {
   				'5': 'hsl(var(--chart-5))'
   			}
   		},
+  		backgroundImage: {
+  			'brand-gradient': 'linear-gradient(to right, #8229FF, #B580FF)',
+  			'dark-gradient': 'linear-gradient(to right, #15181A, #222529)',
+  		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			sm: 'calc(var(--radius) - 4px)',
+  			xl: '12px', // Standard radius for institutional design
   		}
   	}
   },

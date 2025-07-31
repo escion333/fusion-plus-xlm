@@ -1,0 +1,22 @@
+{
+  "name": "stellar-fusion-extended-resolver",
+  "version": "1.0.0",
+  "description": "Extended 1inch cross-chain resolver with Stellar support",
+  "main": "src/demo-simple.ts",
+  "scripts": {
+    "demo": "ts-node src/demo-simple.ts",
+    "demo:mainnet": "ts-node src/demo-mainnet.ts",
+    "build": "tsc",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "stellar-sdk": "^11.3.0",
+    "ethers": "^6.13.2",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0"
+  }
+}

@@ -8,71 +8,99 @@
   }
 }
 
-
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-  }
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
+    /* Brand Colors */
+    --brand-primary: 130 100% 57%; /* #8229FF */
+    --brand-secondary: 264 100% 75%; /* #B580FF */
+    --brand-tertiary: 264 100% 90%; /* #E1CCFF */
+    
+    /* Neutral Colors - Dark Mode First */
+    --neutral-900: 210 11% 9%; /* #15181A */
+    --neutral-700: 214 11% 15%; /* #222529 */
+    --neutral-500: 210 6% 23%; /* #383B3E */
+    --neutral-300: 210 3% 45%; /* #6F7174 */
+    --neutral-100: 210 2% 62%; /* #9C9D9F */
+    --neutral-0: 0 0% 100%; /* #FFFFFF */
+    
+    /* System Colors - Dark Mode as Default */
+    --background: 210 11% 9%; /* neutral-900 */
+    --foreground: 0 0% 100%; /* neutral-0 */
+    --card: 214 11% 15%; /* neutral-700 */
+    --card-foreground: 0 0% 100%;
+    --popover: 214 11% 15%; /* neutral-700 */
+    --popover-foreground: 0 0% 100%;
+    --primary: 130 100% 57%; /* brand-primary */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 264 100% 75%; /* brand-secondary */
+    --secondary-foreground: 210 11% 9%;
+    --muted: 210 6% 23%; /* neutral-500 */
+    --muted-foreground: 210 2% 62%; /* neutral-100 */
+    --accent: 264 100% 90%; /* brand-tertiary */
+    --accent-foreground: 210 11% 9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 6% 23%; /* neutral-500 */
+    --input: 210 6% 23%; /* neutral-500 */
+    --ring: 130 100% 57%; /* brand-primary */
+    
+    /* Chart colors with purple tones */
+    --chart-1: 130 100% 57%; /* brand-primary */
+    --chart-2: 264 100% 75%; /* brand-secondary */
+    --chart-3: 264 100% 90%; /* brand-tertiary */
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    
+    /* UI Tokens */
+    --radius: 12px; /* Standard institutional radius */
   }
 }
-
-
 
 @layer base {
   * {
     @apply border-border;
   }
+  
+  html {
+    @apply bg-neutral-900;
+  }
+  
   body {
-    @apply bg-background text-foreground;
+    @apply bg-neutral-900 text-neutral-0 font-sans antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Typography Scale */
+  h1 {
+    @apply text-5xl font-bold tracking-tight;
+  }
+  
+  h2 {
+    @apply text-4xl font-bold tracking-tight;
+  }
+  
+  h3 {
+    @apply text-3xl font-semibold tracking-tight;
+  }
+  
+  p {
+    @apply text-base text-neutral-100 leading-relaxed;
+  }
+}
+
+@layer components {
+  /* Brand Gradient Button */
+  .btn-gradient {
+    @apply bg-brand-gradient text-white font-medium rounded-xl px-6 py-3 text-sm transition-all duration-200 hover:opacity-90 hover:shadow-lg hover:shadow-brand-primary/25;
+  }
+  
+  /* Glass morphism effect for cards */
+  .glass-card {
+    @apply bg-neutral-700/50 backdrop-blur-xl border border-neutral-500/20 rounded-xl;
+  }
+  
+  /* Institutional grade input styling */
+  .input-institutional {
+    @apply bg-neutral-700 border border-neutral-500 rounded-xl px-4 py-3 text-neutral-0 placeholder:text-neutral-100 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 transition-all duration-200;
   }
 }

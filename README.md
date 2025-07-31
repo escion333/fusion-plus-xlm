@@ -1,4 +1,6 @@
-# 1inch Fusion+ Integration for Stellar
+# 1inch Fusion+ Integration for Stellar 🏆
+
+**First non-EVM blockchain integrated with 1inch Fusion+ Protocol**
 
 A production-ready cross-chain swap implementation that bridges 1inch's Fusion+ protocol with the Stellar network, enabling seamless token swaps between Ethereum-based assets and Stellar assets.
 
@@ -7,12 +9,13 @@ A production-ready cross-chain swap implementation that bridges 1inch's Fusion+ 
 ![Stellar](https://img.shields.io/badge/Stellar-mainnet-orange.svg)
 ![Status](https://img.shields.io/badge/status-live%20on%20mainnet-brightgreen.svg)
 
-## 🎯 Mainnet Status
+## 🎯 Mainnet Deployment
 
-✅ **HTLC Contracts Live on Stellar Mainnet**
-- Production Contract: `CBPL4TVZUM4TAHSRISO4CNNPWAIGMQLUN5MB4MDVZ5ZL3SRRTN56CVNG`
-- Successfully tested complete HTLC flow with real XLM
-- Full cross-chain integration ready for demonstration
+✅ **Live on Stellar Mainnet**
+- Contract ID: `CBX3ET3JMZQCQF74YN2PR35ALF3EI73VMYWUX33WKTQMY62I2YR2YWFU`
+- [View on Explorer](https://stellar.expert/explorer/public/contract/CBX3ET3JMZQCQF74YN2PR35ALF3EI73VMYWUX33WKTQMY62I2YR2YWFU)
+- [Successful TX Proof](https://stellar.expert/explorer/public/tx/3b5b8935203e331b3dff64233485072ba3181266d5d66ebcf43fc3052fed006d)
+- Full HTLC flow tested with real assets
 
 ## 🚀 Overview
 
@@ -45,6 +48,26 @@ This project implements the first integration of 1inch Fusion+ protocol with the
 - PostgreSQL 14+
 - MetaMask wallet (for Ethereum)
 - Freighter wallet (for Stellar)
+
+## 🎬 Demo the Integration
+
+### Run the Mainnet Demo
+```bash
+# Navigate to extended resolver
+cd extended-resolver
+
+# Install dependencies
+npm install
+
+# Run the mainnet demo
+npm run demo:mainnet
+```
+
+This will show:
+- ✅ Deployed mainnet contract details
+- ✅ Cross-chain swap flow demonstration
+- ✅ Real transaction proof
+- ✅ Integration architecture
 
 ## 🏃 Quick Start
 
