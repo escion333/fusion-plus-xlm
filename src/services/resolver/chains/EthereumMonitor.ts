@@ -13,27 +13,67 @@ export class EthereumMonitor extends BaseMonitor {
   constructor(chainConfig: ChainConfig, resolverAccount: ResolverAccount) {
     super(chainConfig, resolverAccount);
     
-    this.provider = new ethers.JsonRpcProvider(chainConfig.rpcUrl);
-    this.wallet = new ethers.Wallet(resolverAccount.privateKey, this.provider);
-    
-    if (chainConfig.escrowFactory) {
-      this.escrowFactory = new ethers.Contract(
-        chainConfig.escrowFactory,
-        ESCROW_FACTORY_ABI,
-        this.wallet
-      );
+    try {
+      this.provider = new ethers.JsonRpcProvider(chainConfig.rpcUrl);
+      this.wallet = new ethers.Wallet(resolverAccount.privateKey, this.provider);
+      
+      if (chainConfig.escrowFactory) {
+        this.escrowFactory = new ethers.Contract(
+          chainConfig.escrowFactory,
+          ESCROW_FACTORY_ABI,
+          this.wallet
+        );
+        logger.info(`Ethereum monitor initialized for ${chainConfig.name}`, {
+          escrowFactory: chainConfig.escrowFactory,
+          resolverAddress: this.wallet.address,
+        });
+      } else {
+        logger.warn(`No escrow factory configured for ${chainConfig.name}`);
+      }
+    } catch (error) {
+      logger.error(`Failed to initialize Ethereum monitor for ${chainConfig.name}:`, error);
+      throw error;
     }
   }
 
   async start(): Promise<void> {
     logger.info(`Starting Ethereum monitor for ${this.chainConfig.name}`);
     
-    // Test connection
-    const network = await this.provider.getNetwork();
-    logger.info(`Connected to ${this.chainConfig.name}, chainId: ${network.chainId}`);
-    
-    // Start polling
-    await this.startPolling();
+    try {
+      // Test connection
+      logger.info(`Testing connection to ${this.chainConfig.rpcUrl}...`);
+      const network = await this.provider.getNetwork();
+      
+      // Verify chain ID matches
+      if (network.chainId !== BigInt(this.chainConfig.id)) {
+        throw new Error(`Chain ID mismatch: expected ${this.chainConfig.id}, got ${network.chainId}`);
+      }
+      
+      logger.info(`✅ Connected to ${this.chainConfig.name}`, {
+        chainId: network.chainId.toString(),
+        rpcUrl: this.chainConfig.rpcUrl,
+      });
+      
+      // Check resolver balance
+      const balance = await this.provider.getBalance(this.wallet.address);
+      const balanceETH = ethers.formatEther(balance);
+      logger.info(`Resolver balance on ${this.chainConfig.name}: ${balanceETH} ETH`);
+      
+      if (balance === 0n) {
+        logger.warn(`⚠️  Resolver has zero balance on ${this.chainConfig.name}!`);
+      }
+      
+      // Start polling
+      await this.startPolling();
+      
+    } catch (error) {
+      logger.error(`Failed to start Ethereum monitor:`, {
+        chain: this.chainConfig.name,
+        error: error.message,
+        rpcUrl: this.chainConfig.rpcUrl,
+      });
+      throw error;
+    }
   }
 
   async stop(): Promise<void> {

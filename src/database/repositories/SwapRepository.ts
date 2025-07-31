@@ -3,18 +3,31 @@ import { SwapOrder, SwapStatus } from '../../types/swap';
 import { logger } from '../../services/resolver/utils/logger';
 
 export class SwapRepository {
-  private pool: Pool;
+  private pool: Pool | null = null;
+  private inMemory: boolean = false;
+  private swaps: Map<string, SwapOrder> = new Map();
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    });
+    // Check if we should use in-memory storage
+    if (connectionString.includes('memory') || !connectionString.includes('://')) {
+      this.inMemory = true;
+      logger.info('Using in-memory storage for swaps');
+    } else {
+      this.pool = new Pool({
+        connectionString,
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000,
+      });
+    }
   }
 
   async initialize(): Promise<void> {
+    if (this.inMemory) {
+      logger.info('In-memory swap repository initialized');
+      return;
+    }
+    
     // Create tables if they don't exist
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS swaps (
@@ -51,6 +64,13 @@ export class SwapRepository {
   }
 
   async create(swap: SwapOrder): Promise<void> {
+    if (this.inMemory) {
+      // In-memory implementation
+      this.swaps.set(swap.id, swap);
+      logger.info('Swap created in memory', { orderHash: swap.orderHash });
+      return;
+    }
+    
     const query = `
       INSERT INTO swaps (
         id, order_hash, maker, taker, maker_asset, taker_asset,

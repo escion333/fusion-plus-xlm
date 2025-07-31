@@ -214,10 +214,18 @@ const fusionApiProxy = createProxyMiddleware({
 });
 
 // Mock endpoints for demo (when no API key is available)
+// Store mock orders in memory for demo
+const mockOrders = new Map<string, any>();
+
 app.get('/api/mock/fusion/orders/active', (req: Request, res: Response) => {
   // Return mock active orders
+  const orders = Array.from(mockOrders.values()).filter(order => 
+    order.status !== 'completed' && order.status !== 'failed'
+  );
+  
   res.json({
     orders: [
+      ...orders,
       {
         orderHash: '0x' + Math.random().toString(16).substring(2, 66),
         status: 'active',
@@ -243,45 +251,165 @@ app.get('/api/mock/fusion/orders/active', (req: Request, res: Response) => {
 app.post('/api/mock/fusion/orders/create', express.json(), (req: Request, res: Response) => {
   // Return mock created order
   const order = req.body;
+  const orderHash = '0x' + Math.random().toString(16).substring(2, 66);
+  const createdOrder = {
+    ...order,
+    orderHash,
+    status: 'created',
+    createdAt: new Date().toISOString(),
+    progress: 'creating',
+  };
+  
+  // Store order for status tracking
+  mockOrders.set(orderHash, createdOrder);
+  
+  // Simulate order progression
+  setTimeout(() => {
+    const order = mockOrders.get(orderHash);
+    if (order) {
+      order.status = 'pending';
+      order.progress = 'pending';
+      mockOrders.set(orderHash, order);
+    }
+  }, 2000);
+  
+  setTimeout(() => {
+    const order = mockOrders.get(orderHash);
+    if (order) {
+      order.status = 'claimed';
+      order.progress = 'processing';
+      order.resolver = '0x' + Math.random().toString(16).substring(2, 40);
+      mockOrders.set(orderHash, order);
+    }
+  }, 5000);
+  
+  setTimeout(() => {
+    const order = mockOrders.get(orderHash);
+    if (order) {
+      order.status = 'executing';
+      order.progress = 'processing';
+      order.escrowAddresses = {
+        source: '0x' + Math.random().toString(16).substring(2, 40),
+        destination: '0x' + Math.random().toString(16).substring(2, 40),
+      };
+      mockOrders.set(orderHash, order);
+    }
+  }, 8000);
+  
+  setTimeout(() => {
+    const order = mockOrders.get(orderHash);
+    if (order) {
+      order.status = 'completed';
+      order.progress = 'completed';
+      order.completedAt = new Date().toISOString();
+      order.txHashes = {
+        source: '0x' + Math.random().toString(16).substring(2, 64),
+        destination: '0x' + Math.random().toString(16).substring(2, 64),
+      };
+      mockOrders.set(orderHash, order);
+    }
+  }, 15000);
+  
   res.json({
     success: true,
-    order: {
-      ...order,
-      orderHash: '0x' + Math.random().toString(16).substring(2, 66),
-      status: 'created',
-      createdAt: new Date().toISOString(),
-    },
+    order: createdOrder,
   });
 });
 
-app.get('/api/mock/quote', validateQuote, (req: QuoteRequest, res: Response) => {
-  // Return mock quote
-  const { src, dst, amount } = req.query;
-  res.json({
-    fromToken: {
-      symbol: 'ETH',
-      name: 'Ethereum',
-      decimals: 18,
-      address: src as string,
-    },
-    toToken: {
-      symbol: 'USDC',
-      name: 'USD Coin',
-      decimals: 6,
-      address: dst as string,
-    },
-    fromAmount: amount as string,
-    toAmount: (parseInt(amount as string) * 2).toString(), // Mock 2x rate
-    protocols: [
-      [
-        {
-          name: 'ONEINCH_FUSION',
-          part: 100,
+// Get order status endpoint
+app.get('/api/mock/fusion/orders/:orderHash', (req: Request, res: Response) => {
+  const { orderHash } = req.params;
+  const order = mockOrders.get(orderHash);
+  
+  if (!order) {
+    res.status(404).json({ error: 'Order not found' });
+    return;
+  }
+  
+  res.json({ order });
+});
+
+// Add handler for direct fusion/orders/create endpoint
+app.post('/api/fusion/orders/create', express.json(), (req: Request, res: Response) => {
+  // In production, this would forward to real 1inch API
+  // For now, forward to mock endpoint
+  req.url = '/api/mock/fusion/orders/create';
+  app.handle(req, res);
+});
+
+// Add handler for getting order status (live mode)
+app.get('/api/fusion/orders/:orderHash', (req: Request, res: Response) => {
+  // In production, this would query real 1inch API
+  // For now, try to get from mock orders
+  const { orderHash } = req.params;
+  const order = mockOrders.get(orderHash);
+  
+  if (order) {
+    res.json({ order });
+  } else {
+    res.status(404).json({ error: 'Order not found in live mode' });
+  }
+});
+
+app.get('/api/mock/quote', (req: Request, res: Response) => {
+  try {
+    // Return mock quote without validation for demo
+    const { src, dst, amount } = req.query;
+    
+    // Convert user-friendly amount to wei/smallest unit
+    const amountStr = amount as string || '1000000000000000000';
+    const srcToken = src as string || '0x0000000000000000000000000000000000000000';
+    const dstToken = dst as string || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+    
+    res.json({
+      fromToken: {
+        symbol: srcToken === '0x0000000000000000000000000000000000000000' ? 'ETH' : 'TOKEN',
+        name: srcToken === '0x0000000000000000000000000000000000000000' ? 'Ethereum' : 'Token',
+        decimals: 18,
+        address: srcToken,
+      },
+      toToken: {
+        symbol: dstToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' ? 'USDC' : 'TOKEN',
+        name: dstToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' ? 'USD Coin' : 'Token',
+        decimals: 6,
+        address: dstToken,
+      },
+      fromAmount: amountStr,
+      toAmount: (() => {
+        // Mock rates for different token pairs
+        const amount = parseFloat(amountStr);
+        
+        // Determine source token decimals
+        const isSourceETH = srcToken === '0x0000000000000000000000000000000000000000' || 
+                           srcToken === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+        const isDestUSDC = dstToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+        
+        if (isSourceETH && isDestUSDC) {
+          // ETH to USDC: 1 ETH = 3000 USDC
+          return Math.floor(amount * 3000 / 1e18 * 1e6).toString();
+        } else if (!isSourceETH && isDestUSDC) {
+          // USDC to USDC (cross-chain): 1:1 with small fee
+          return Math.floor(amount * 0.998).toString(); // 0.2% fee
+        } else {
+          // Default: same amount (for testing)
+          return amountStr;
         }
-      ]
-    ],
-    estimatedGas: '150000',
-  });
+      })(),
+      protocols: [
+        [
+          {
+            name: 'ONEINCH_FUSION',
+            part: 100,
+          }
+        ]
+      ],
+      estimatedGas: '150000',
+      isMockData: true,
+    });
+  } catch (error) {
+    console.error('Mock quote error:', error);
+    res.status(500).json({ error: 'Mock quote generation failed', message: error instanceof Error ? error.message : 'Unknown error' });
+  }
 });
 
 // Apply rate limiting to all routes
@@ -299,8 +427,8 @@ app.use('/api/fusion', fusionApiProxy);
 // Apply error handler
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, () => {
+// Start server with error handling
+const server = app.listen(PORT, () => {
   console.log(`🚀 1inch API Proxy Server running on http://localhost:${PORT}`);
   console.log('');
   console.log('📍 Endpoints:');
@@ -318,6 +446,42 @@ app.listen(PORT, () => {
   } else {
     console.log('✅ 1inch API key configured');
   }
+  
+  // Log environment
+  console.log('');
+  console.log('📋 Configuration:');
+  console.log(`  - Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`  - CORS Origin: ${process.env.CORS_ORIGIN || '*'}`);
+  console.log(`  - Log Level: ${process.env.LOG_LEVEL || 'info'}`);
+});
+
+// Handle server errors
+server.on('error', (error: any) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use. Please stop the other process or use a different port.`);
+  } else if (error.code === 'EACCES') {
+    console.error(`❌ Permission denied to use port ${PORT}. Try a port number above 1024.`);
+  } else {
+    console.error('❌ Server error:', error);
+  }
+  process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('\n📭 SIGTERM received, closing server gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('\n📭 SIGINT received, closing server gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
 });
 
 export default app;

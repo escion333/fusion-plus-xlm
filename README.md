@@ -5,6 +5,14 @@ A production-ready cross-chain swap implementation that bridges 1inch's Fusion+ 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Ethereum](https://img.shields.io/badge/Ethereum-mainnet-green.svg)
 ![Stellar](https://img.shields.io/badge/Stellar-mainnet-orange.svg)
+![Status](https://img.shields.io/badge/status-live%20on%20mainnet-brightgreen.svg)
+
+## 🎯 Mainnet Status
+
+✅ **HTLC Contracts Live on Stellar Mainnet**
+- Production Contract: `CBPL4TVZUM4TAHSRISO4CNNPWAIGMQLUN5MB4MDVZ5ZL3SRRTN56CVNG`
+- Successfully tested complete HTLC flow with real XLM
+- Full cross-chain integration ready for demonstration
 
 ## 🚀 Overview
 
@@ -25,8 +33,9 @@ This project implements the first integration of 1inch Fusion+ protocol with the
 - **Smart Contracts**: 
   - Stellar: Rust/Soroban with WASM compilation
   - Ethereum: Solidity with Hardhat framework
+  - Integration with 1inch Limit Order Protocol
 - **Backend**: Node.js, Express, PostgreSQL
-- **Integration**: 1inch Fusion SDK, ethers.js, Stellar SDK
+- **Integration**: 1inch Fusion SDK, ethers.js, Stellar SDK, Limit Order Protocol
 
 ## 📋 Prerequisites
 
@@ -79,15 +88,18 @@ This project implements the first integration of 1inch Fusion+ protocol with the
 fusion-plus-xlm/
 ├── frontend/              # Next.js frontend application
 ├── src/                   # Backend services
-│   ├── resolver/         # Cross-chain resolver service
-│   └── proxy/           # 1inch API proxy server
-├── contracts/            # Smart contracts
-│   ├── ethereum/        # Ethereum HTLC contracts
-│   └── stellar/         # Stellar Soroban contracts
+│   ├── services/         # Resolver and proxy services
+│   ├── database/         # Data persistence layer
+│   └── config/           # Configuration files
+├── contracts/            # Smart contract interfaces
 ├── stellar-fusion/       # Stellar contract implementation
-├── scripts/             # Deployment and utility scripts
-└── docs/               # Documentation
+├── scripts/              # Deployment and demo scripts
+│   └── 1inch/           # 1inch integration demos
+└── docs/                 # Documentation
+    └── ai-plans/         # Architecture specifications
 ```
+
+⚠️ **Important**: The resolver architecture requires significant changes. See `docs/ai-plans/resolver-contract-specification.md` for the correct implementation.
 
 ## 💻 Development
 

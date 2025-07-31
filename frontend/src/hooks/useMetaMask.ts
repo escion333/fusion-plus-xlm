@@ -136,11 +136,27 @@ export const useMetaMask = (config?: WalletConfig) => {
     }
   }, []);
 
+  const switchToMainnet = useCallback(async () => {
+    if (!window.ethereum) {
+      throw new Error('Wallet is not installed');
+    }
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x1' }], // Mainnet chainId
+      });
+    } catch (error: any) {
+      throw error;
+    }
+  }, []);
+
   return {
     ...state,
     connect,
     disconnect,
     switchToSepolia,
+    switchToMainnet,
   };
 };
 

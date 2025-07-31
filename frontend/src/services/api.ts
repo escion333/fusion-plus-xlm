@@ -1,5 +1,5 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_RESOLVER_API_URL || 'http://localhost:3001';
-const PROXY_BASE_URL = process.env.NEXT_PUBLIC_PROXY_API_URL || 'http://localhost:3002';
+const PROXY_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
 
 interface CreateSwapRequest {
   sourceChain: string;
@@ -62,16 +62,21 @@ interface QuoteResponse {
   estimatedGas: string;
   protocols: string[][];
   crossChain?: boolean;
+  isMockData?: boolean;
 }
 
 export class FusionAPI {
-  static async getActiveOrders(maker?: string): Promise<FusionOrder[]> {
+  static async getActiveOrders(maker?: string, mockMode: boolean = false): Promise<FusionOrder[]> {
     try {
       const params = maker ? `?maker=${maker}` : '';
-      const response = await fetch(`${PROXY_BASE_URL}/api/fusion/orders/active${params}`);
+      const endpoint = mockMode 
+        ? `${PROXY_BASE_URL}/api/mock/fusion/orders/active${params}`
+        : `${PROXY_BASE_URL}/api/fusion/orders/active${params}`;
       
-      if (!response.ok) {
-        // Fall back to mock orders
+      const response = await fetch(endpoint);
+      
+      if (!response.ok && !mockMode) {
+        // Fall back to mock orders if live mode fails
         const mockResponse = await fetch(`${PROXY_BASE_URL}/api/mock/fusion/orders/active${params}`);
         return mockResponse.json();
       }
@@ -83,9 +88,13 @@ export class FusionAPI {
     }
   }
   
-  static async createOrder(order: Partial<FusionOrder>): Promise<FusionOrder> {
+  static async createOrder(order: Partial<FusionOrder>, mockMode: boolean = false): Promise<FusionOrder> {
     try {
-      const response = await fetch(`${PROXY_BASE_URL}/api/fusion/orders/create`, {
+      const endpoint = mockMode
+        ? `${PROXY_BASE_URL}/api/mock/fusion/orders/create`
+        : `${PROXY_BASE_URL}/api/fusion/orders/create`;
+        
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,8 +102,8 @@ export class FusionAPI {
         body: JSON.stringify(order),
       });
       
-      if (!response.ok) {
-        // Fall back to mock create
+      if (!response.ok && !mockMode) {
+        // Fall back to mock create if live mode fails
         const mockResponse = await fetch(`${PROXY_BASE_URL}/api/mock/fusion/orders/create`, {
           method: 'POST',
           headers: {
@@ -106,20 +115,67 @@ export class FusionAPI {
         return data.order;
       }
       
-      return response.json();
+      const data = await response.json();
+      return data.order || data;
     } catch (error) {
       console.error('Failed to create order:', error);
       throw error;
     }
   }
   
-  static async getQuote(request: QuoteRequest): Promise<QuoteResponse> {
+  static async getOrderStatus(orderHash: string, mockMode: boolean = false): Promise<any> {
+    try {
+      const endpoint = mockMode
+        ? `${PROXY_BASE_URL}/api/mock/fusion/orders/${orderHash}`
+        : `${PROXY_BASE_URL}/api/fusion/orders/${orderHash}`;
+        
+      const response = await fetch(endpoint);
+      
+      if (!response.ok && !mockMode) {
+        // Try mock endpoint if live fails
+        const mockResponse = await fetch(`${PROXY_BASE_URL}/api/mock/fusion/orders/${orderHash}`);
+        if (mockResponse.ok) {
+          const data = await mockResponse.json();
+          return data.order;
+        }
+        throw new Error('Order not found');
+      }
+      
+      if (!response.ok) {
+        throw new Error('Order not found');
+      }
+      
+      const data = await response.json();
+      return data.order;
+    } catch (error) {
+      console.error('Failed to get order status:', error);
+      throw error;
+    }
+  }
+  
+  static async getQuote(request: QuoteRequest, mockMode: boolean = false): Promise<QuoteResponse> {
     try {
       const params = new URLSearchParams({
         src: request.fromToken,
         dst: request.toToken,
         amount: request.amount,
       });
+      
+      if (mockMode) {
+        // Use mock endpoint directly in mock mode
+        const mockResponse = await fetch(`${PROXY_BASE_URL}/api/mock/quote?${params}`);
+        const mockData = await mockResponse.json();
+        return {
+          fromToken: request.fromToken,
+          toToken: request.toToken,
+          fromAmount: request.amount,
+          toAmount: mockData.toAmount,
+          estimatedGas: mockData.estimatedGas,
+          protocols: mockData.protocols,
+          crossChain: request.fromChain !== request.toChain,
+          isMockData: true
+        };
+      }
       
       const response = await fetch(`${PROXY_BASE_URL}/api/1inch/quote?${params}`);
       

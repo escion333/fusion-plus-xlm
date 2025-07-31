@@ -8,11 +8,8 @@ interface WalletContextType {
   metamask: ReturnType<typeof useMetaMask>;
   freighter: ReturnType<typeof useFreighter>;
   connectWallets: () => Promise<void>;
-  connectEvmWallet: (walletId: string) => Promise<void>;
   disconnectWallets: () => void;
   isFullyConnected: boolean;
-  showWalletSelector: boolean;
-  setShowWalletSelector: (show: boolean) => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -20,27 +17,19 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const metamask = useMetaMask();
   const freighter = useFreighter();
-  const [showWalletSelector, setShowWalletSelector] = useState(false);
-
-  const connectEvmWallet = async (walletId: string) => {
-    try {
-      await metamask.connect(walletId);
-      
-      // Ensure wallet is on Sepolia
-      if (metamask.chainId && metamask.chainId !== 11155111) {
-        await metamask.switchToSepolia();
-      }
-    } catch (error) {
-      console.error('Error connecting EVM wallet:', error);
-      throw error;
-    }
-  };
 
   const connectWallets = async () => {
     try {
-      // Show wallet selector for EVM
-      setShowWalletSelector(true);
-      // Don't connect Freighter here - wait for EVM wallet to be selected first
+      // Connect directly to Rabby (or whatever wallet is available)
+      await metamask.connect('auto');
+      
+      // Connect Freighter for Stellar
+      await freighter.connect();
+      
+      // Ensure wallet is on mainnet (chain ID 1)
+      if (metamask.chainId && metamask.chainId !== 1) {
+        await metamask.switchToMainnet();
+      }
     } catch (error) {
       console.error('Error connecting wallets:', error);
       throw error;
@@ -59,11 +48,8 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       metamask,
       freighter,
       connectWallets,
-      connectEvmWallet,
       disconnectWallets,
       isFullyConnected,
-      showWalletSelector,
-      setShowWalletSelector,
     }}>
       {children}
     </WalletContext.Provider>

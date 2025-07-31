@@ -11,6 +11,7 @@ interface SwapState {
     fromAmount: string;
     toAmount: string;
     estimatedGas: string;
+    isMockData?: boolean;
   } | null;
   activeOrders: any[];
 }
@@ -35,19 +36,27 @@ export const useSwap = () => {
     toChain: string,
     fromToken: string,
     toToken: string,
-    amount: string
+    amount: string,
+    mockMode: boolean = false
   ) => {
     try {
       const sourceToken = getTokenAddress(fromChain, fromToken);
       const destToken = getTokenAddress(toChain, toToken);
       
+      // Convert amount to proper decimals
+      const amountInWei = fromToken === 'ETH' 
+        ? ethers.parseEther(amount).toString()
+        : fromToken === 'XLM'
+        ? ethers.parseUnits(amount, 7).toString()
+        : ethers.parseUnits(amount, 6).toString(); // USDC
+      
       const quote = await FusionAPI.getQuote({
         fromToken: sourceToken,
         toToken: destToken,
-        amount,
+        amount: amountInWei,
         fromChain,
         toChain,
-      });
+      }, mockMode);
       
       setState(prev => ({
         ...prev,
@@ -55,6 +64,7 @@ export const useSwap = () => {
           fromAmount: quote.fromAmount,
           toAmount: quote.toAmount,
           estimatedGas: quote.estimatedGas,
+          isMockData: quote.isMockData,
         },
       }));
       
@@ -71,7 +81,8 @@ export const useSwap = () => {
     toChain: string,
     fromToken: string,
     toToken: string,
-    amount: string
+    amount: string,
+    mockMode: boolean = false
   ) => {
     if (!metamask.isConnected) {
       throw new Error('MetaMask must be connected');
@@ -85,14 +96,21 @@ export const useSwap = () => {
       const destToken = getTokenAddress(toChain, toToken);
       
       // Get quote first
-      const quote = await getQuote(fromChain, toChain, fromToken, toToken, amount);
+      const quote = await getQuote(fromChain, toChain, fromToken, toToken, amount, mockMode);
+      
+      // Convert amount to proper decimals
+      const makingAmountInWei = fromToken === 'ETH' 
+        ? ethers.parseEther(amount).toString()
+        : fromToken === 'XLM'
+        ? ethers.parseUnits(amount, 7).toString()
+        : ethers.parseUnits(amount, 6).toString(); // USDC
       
       // Create Fusion order
       const order = await FusionAPI.createOrder({
         maker,
         makerAsset: sourceToken,
         takerAsset: destToken,
-        makingAmount: amount,
+        makingAmount: makingAmountInWei,
         takingAmount: quote.toAmount,
         deadline: Math.floor(Date.now() / 1000) + 3600, // 1 hour
         crossChain: toChain !== fromChain ? {
@@ -100,7 +118,7 @@ export const useSwap = () => {
           destinationChain: toChain,
           stellarReceiver: toChain === 'stellar' ? (freighter.publicKey || undefined) : undefined,
         } : undefined,
-      });
+      }, mockMode);
       
       setState(prev => ({
         ...prev,
@@ -121,9 +139,9 @@ export const useSwap = () => {
   }, [metamask, freighter, getQuote]);
 
   // Fetch active orders
-  const fetchActiveOrders = useCallback(async () => {
+  const fetchActiveOrders = useCallback(async (mockMode: boolean = false) => {
     try {
-      const orders = await FusionAPI.getActiveOrders(metamask.address || undefined);
+      const orders = await FusionAPI.getActiveOrders(metamask.address || undefined, mockMode);
       setState(prev => ({ ...prev, activeOrders: orders }));
       return orders;
     } catch (error) {

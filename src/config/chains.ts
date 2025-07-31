@@ -24,7 +24,7 @@ export const CHAIN_CONFIGS: Record<string, ChainConfig> = {
     },
     blockTime: 12,
     confirmations: 12,
-    escrowFactory: process.env.ETHEREUM_ESCROW_FACTORY,
+    escrowFactory: process.env.ETHEREUM_ESCROW_FACTORY || '0xa7bcb4eac8964306f9e3764f67db6a7af6ddf99a',
   },
   sepolia: {
     id: 11155111,
@@ -42,7 +42,7 @@ export const CHAIN_CONFIGS: Record<string, ChainConfig> = {
   stellar: {
     id: 'stellar',
     name: 'Stellar',
-    rpcUrl: process.env.STELLAR_RPC_URL || 'https://soroban-rpc.mainnet.stellar.gateway.fm',
+    rpcUrl: process.env.STELLAR_SOROBAN_RPC_URL || 'https://soroban-rpc.stellar.org',
     nativeCurrency: {
       name: 'Lumen',
       symbol: 'XLM',
@@ -50,7 +50,7 @@ export const CHAIN_CONFIGS: Record<string, ChainConfig> = {
     },
     blockTime: 5,
     confirmations: 1,
-    escrowFactory: process.env.STELLAR_ESCROW_CONTRACT,
+    escrowFactory: process.env.STELLAR_CONTRACT_ID,
   },
   stellarTestnet: {
     id: 'stellar-testnet',

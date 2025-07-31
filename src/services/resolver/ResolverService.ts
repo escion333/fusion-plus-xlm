@@ -75,31 +75,84 @@ export class ResolverService extends EventEmitter {
     }
 
     logger.info('Starting resolver service...');
-    this.isRunning = true;
-
-    // Initialize database
-    await this.swapRepository.initialize();
-
-    // Start chain monitors
-    for (const [chainId, monitor] of this.chainMonitors) {
-      monitor.on('escrowEvent', (event: EscrowEvent) => {
-        this.handleEscrowEvent(chainId, event);
-      });
-      
-      await monitor.start();
-      logger.info(`Started monitoring ${chainId}`);
-    }
-
-    // Start timelock manager
-    this.timelockManager.on('timelockExpired', async (data) => {
-      await this.handleTimelockExpiration(data);
+    logger.info('Configuration:', {
+      chains: this.config.chains,
+      resolverAddress: this.config.resolver.address,
+      pollingInterval: this.config.polling.interval,
+      databaseUrl: this.config.database.connectionString.replace(/\/\/.*@/, '//***@'), // Hide credentials
     });
-    await this.timelockManager.start();
 
-    // Start orchestrator
-    await this.swapOrchestrator.start();
+    try {
+      this.isRunning = true;
 
-    logger.info('Resolver service started successfully');
+      // Initialize database
+      logger.info('Initializing database...');
+      await this.swapRepository.initialize();
+      logger.info('Database initialized successfully');
+
+      // Validate chain configurations
+      for (const chainId of this.config.chains) {
+        const monitor = this.chainMonitors.get(chainId);
+        if (!monitor) {
+          throw new Error(`No monitor configured for chain: ${chainId}`);
+        }
+      }
+
+      // Start chain monitors
+      for (const [chainId, monitor] of this.chainMonitors) {
+        try {
+          logger.info(`Starting ${chainId} monitor...`);
+          
+          monitor.on('escrowEvent', (event: EscrowEvent) => {
+            this.handleEscrowEvent(chainId, event).catch(error => {
+              logger.error(`Failed to handle escrow event on ${chainId}:`, error);
+            });
+          });
+          
+          monitor.on('error', (error: Error) => {
+            logger.error(`Monitor error on ${chainId}:`, error);
+          });
+          
+          await monitor.start();
+          logger.info(`✅ Started monitoring ${chainId}`);
+        } catch (error) {
+          logger.error(`Failed to start monitor for ${chainId}:`, error);
+          throw new Error(`Chain monitor startup failed for ${chainId}: ${error.message}`);
+        }
+      }
+
+      // Start timelock manager
+      logger.info('Starting timelock manager...');
+      this.timelockManager.on('timelockExpired', async (data) => {
+        try {
+          await this.handleTimelockExpiration(data);
+        } catch (error) {
+          logger.error('Failed to handle timelock expiration:', error);
+        }
+      });
+      await this.timelockManager.start();
+      logger.info('✅ Timelock manager started');
+
+      // Start orchestrator
+      logger.info('Starting swap orchestrator...');
+      await this.swapOrchestrator.start();
+      logger.info('✅ Swap orchestrator started');
+
+      logger.info('🚀 Resolver service started successfully');
+      
+      // Log initial status
+      const status = this.getStatus();
+      logger.info('Initial status:', status);
+      
+    } catch (error) {
+      logger.error('Failed to start resolver service:', error);
+      this.isRunning = false;
+      
+      // Cleanup on failure
+      await this.stop();
+      
+      throw error;
+    }
   }
 
   async stop() {

@@ -1,19 +1,19 @@
-# Stellar Fusion+ Implementation Plan
+# Stellar Fusion+ Implementation Plan (Hackathon Edition)
 
-## Objective and Success Criteria
+## Hackathon Focus
 
-### Objective
-Implement the first 1inch Fusion+ protocol integration on the Stellar blockchain, enabling trustless cross-chain swaps between Ethereum and Stellar networks using Hash Time Lock Contracts (HTLC).
+### What We Have ✅
+- **Working HTLC Contract**: Deployed, tested, ready
+- **Beautiful Frontend**: UI complete with wallets
+- **Documentation**: Comprehensive guides
 
-### Success Criteria
-- [x] Fully functional Stellar escrow contract (Soroban) with HTLC implementation ✅
-- [x] Support for both XLM and Stellar assets ✅
-- [x] Deterministic address generation matching 1inch protocol ✅
-- [x] 7-stage timelock management with bit-packing ✅
-- [x] Event emission for resolver monitoring ✅
-- [x] Comprehensive test suite (14/14 tests passing) ✅
-- [ ] Successful bidirectional swaps (ETH↔Stellar) - ready for integration
-- [ ] Mainnet deployment on both chains - contract ready
+### What We Need (14 Days)
+Extend the 1inch cross-chain resolver example to support Stellar by:
+1. **Getting their example working** (Days 1-2)
+2. **Adding Stellar resolver contract** (Days 3-5)
+3. **Extending their mock relayer** (Days 6-7)
+4. **Integrating components** (Days 8-11)
+5. **Polishing demo** (Days 12-14)
 
 ## Tasks
 
@@ -72,13 +72,26 @@ Implement the first 1inch Fusion+ protocol integration on the Stellar blockchain
     - [ ] Map EVM 20-byte addresses to Stellar 32-byte keys
     - [ ] Validate addresses across chains
 
-### [~] Main Task 6: Testing and Deployment
-  - [x] Subtask 6.1: Unit tests for all contract functions (10 tests)
-  - [x] Subtask 6.2: Integration tests (4 comprehensive tests)
-  - [x] Subtask 6.3: WASM build optimization (6.7KB)
-  - [ ] Subtask 6.4: Testnet deployment and testing
-  - [ ] Subtask 6.5: Mainnet deployment preparation
-  - [ ] Subtask 6.6: Deploy to Stellar mainnet
+### [ ] Hackathon Task 1: Extend 1inch Example (Days 1-7)
+  - [ ] Get their Ethereum ↔ BSC example working
+  - [ ] Study MockRelayer implementation
+  - [ ] Create Stellar resolver contract
+  - [ ] Extend relayer for Stellar support
+  - [ ] Test basic integration
+
+### [ ] Hackathon Task 2: Full Integration (Days 8-11)
+  - [ ] Connect Stellar components
+  - [ ] Implement address mapping
+  - [ ] Test cross-chain flow
+  - [ ] Deploy to mainnet
+  - [ ] Execute test swaps
+
+### [ ] Hackathon Task 3: Demo Polish (Days 12-14)
+  - [ ] Update UI for demo
+  - [ ] Prepare presentation
+  - [ ] Record backup video
+  - [ ] Test multiple times
+  - [ ] Final deployment
 
 ## Technical Considerations
 
@@ -153,38 +166,47 @@ soroban-sdk = { version = "23.0.0-rc.2.3", features = ["testutils"] }
 
 1. **Soroban Complexity**: Start with minimal implementation, add features incrementally
 
-## Current Status (Final Update)
+## Hackathon Execution Plan
 
-### ✅ Phase 1 Complete
-- Stellar development environment fully configured ✅
-- Core HTLC contract implementation complete ✅
-- All main contract functions implemented ✅
-- Timelock system with 7-stage bit-packing ✅
-- Event emission system functional ✅
-- Safety deposit mechanism implemented ✅
-- Caller authentication on all operations ✅
-- Native XLM token support implemented ✅
-- Deterministic address calculation ✅
-- Comprehensive test suite (14/14 tests passing) ✅
-- Clean build with no warnings ✅
-- WASM binary optimized to 6.7KB ✅
+### Week 1: Foundation & Stellar Components
+**Days 1-2**: Understand 1inch Example
+```bash
+git clone https://github.com/1inch/cross-chain-resolver-example
+npm install && npm test
+# Study their code, understand patterns
+```
 
-### 📋 Phase 2 Tasks (Next)
-1. **Merkle Tree Support** - Enable partial fills for large orders
-2. **Rescue Function** - Add rescue_funds for stuck funds
-3. **Production Factory** - Build full factory contract
-4. **Resolver Service** - Implement Stellar resolver
-5. **Cross-chain Testing** - Integration with Ethereum
-6. **Security Audit** - Professional review
-7. **Mainnet Deployment** - Production launch
+**Days 3-5**: Stellar Resolver Contract
+```rust
+// Minimal resolver matching their pattern
+pub fn deploy_escrow(env: Env, immutables: Immutables);
+pub fn fund_escrow(env: Env, escrow: Address, amount: i128);
+pub fn withdraw(env: Env, escrow: Address, secret: BytesN<32>);
+```
 
-### 📊 Final Metrics
-- **Code Coverage**: 100% (14 comprehensive tests)
-- **Contract Size**: 6.7KB WASM binary
-- **Lines of Code**: ~1,200 (excluding tests)
-- **Modules**: 7 (lib, types, errors, events, storage, timelocks, tests)
-- **Test Files**: 3 (unit, integration, examples)
+**Days 6-7**: Extend Mock Relayer
+```typescript
+class ExtendedRelayer extends MockRelayer {
+  // Add Stellar support
+}
+```
 
-## Summary
+### Week 2: Integration & Demo
+**Days 8-11**: Full Integration
+- Connect all components
+- Test on mainnet
+- Fix issues
 
-The Stellar Fusion+ escrow contract implementation is now feature-complete for Phase 1. All core functionality has been implemented, tested, and documented. The contract is ready for advanced features (Merkle trees, rescue function) and cross-chain integration testing. 
+**Days 12-14**: Demo Preparation
+- Polish UI
+- Create presentation
+- Practice demo
+- Ship it!
+
+## Key Success Factors
+
+1. **Use their infrastructure** - Don't rebuild
+2. **Focus on working demo** - Not perfect code
+3. **Mainnet proof** - Real transactions
+4. **Clear story** - First non-EVM integration
+5. **Time management** - 14 days only! 

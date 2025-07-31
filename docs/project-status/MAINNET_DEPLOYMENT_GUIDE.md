@@ -4,43 +4,37 @@ This guide will help you deploy to mainnet and test real asset transfers between
 
 ## Prerequisites
 
-- [ ] Stellar CLI installed (you have v23.0.0 ✓)
-- [ ] At least 100 XLM for Stellar deployment
+- [x] Stellar CLI installed (you have v23.0.0 ✓)
+- [x] At least 100 XLM for Stellar deployment (✅ 110 XLM available)
 - [ ] At least 0.05 ETH for Ethereum gas (if deploying custom contracts)
-- [ ] 1inch API key from https://portal.1inch.dev/
+- [x] 1inch API key from https://portal.1inch.dev/ (✅ Configured)
 
-## Step 1: Stellar Mainnet Deployment
+## Step 1: Stellar Mainnet Deployment ✅ COMPLETED
 
-### 1.1 Create or Use Existing Mainnet Account
+### 1.1 Mainnet Account Status
+- Test wallet configured: `GA5J2WRMKZIWX5DMGAEXHHYSEWTEMSBCQGIK6YGDGYJWDL6TFMILVQWK`
+- Balance: 110 XLM ✓
 
-```bash
-# Option A: Use existing account (if you have one)
-stellar keys show YOUR_ACCOUNT_NAME
+### 1.2 Deployed Contracts
 
-# Option B: Create new mainnet account
-stellar keys generate --global mainnet_deployer --network mainnet
-
-# IMPORTANT: Fund the account with at least 100 XLM from an exchange
+**Production Contract:**
+```
+CBPL4TVZUM4TAHSRISO4CNNPWAIGMQLUN5MB4MDVZ5ZL3SRRTN56CVNG
 ```
 
-### 1.2 Deploy Stellar Contract
-
-```bash
-# Run the deployment script
-./scripts/deploy-stellar-mainnet.sh mainnet_deployer
-
-# This will:
-# - Deploy the escrow contract (~5-10 XLM cost)
-# - Configure native token settings
-# - Save the contract ID to .env.mainnet
+**Successfully Tested Contract:**
 ```
+CBX3ET3JMZQCQF74YN2PR35ALF3EI73VMYWUX33WKTQMY62I2YR2YWFU
+```
+- ✅ Complete HTLC flow verified with real XLM
+- ✅ Native XLM support via SAC: `CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA`
 
 ### 1.3 Verify Deployment
 
-After deployment, verify your contract on Stellar Expert:
-```
-https://stellar.expert/explorer/public/contract/YOUR_CONTRACT_ID
-```
+View deployed contracts on Stellar Expert:
+- [Production Contract](https://stellar.expert/explorer/public/contract/CBPL4TVZUM4TAHSRISO4CNNPWAIGMQLUN5MB4MDVZ5ZL3SRRTN56CVNG)
+- [Test Contract](https://stellar.expert/explorer/public/contract/CBX3ET3JMZQCQF74YN2PR35ALF3EI73VMYWUX33WKTQMY62I2YR2YWFU)
+- [Successful Withdrawal TX](https://stellar.expert/explorer/public/tx/3b5b8935203e331b3dff64233485072ba3181266d5d66ebcf43fc3052fed006d)
 
 ## Step 2: Configure 1inch Integration
 

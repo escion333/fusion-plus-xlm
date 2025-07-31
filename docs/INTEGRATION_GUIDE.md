@@ -1,21 +1,31 @@
 # Stellar Fusion+ Integration Guide
 
-This guide explains how to connect all components of the Stellar Fusion+ cross-chain swap protocol.
+⚠️ **CRITICAL UPDATE**: This guide is being revised. The resolver must be implemented as smart contracts that fill orders through the Limit Order Protocol, not just as a monitoring service. See `docs/ai-plans/resolver-contract-specification.md` for the correct architecture.
 
-## Architecture Overview
+## Correct Architecture Overview
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│                 │     │                  │     │                 │
-│  Frontend (UI)  │────▶│ Resolver Service │────▶│ Smart Contracts │
-│                 │     │                  │     │                 │
+│                 │     │  1inch Limit     │     │                 │
+│  Frontend (UI)  │────▶│  Order Protocol  │────▶│ Resolver Smart  │
+│                 │     │                  │     │   Contracts     │
 └─────────────────┘     └──────────────────┘     └─────────────────┘
         │                        │                         │
         │                        │                         │
         ▼                        ▼                         ▼
-   MetaMask &              Redis + DB              Ethereum & Stellar
-   Freighter                                         Blockchains
+   User Controls          Order Broadcast           Atomic Escrow
+   Secret Generation      & Dutch Auction            Deployment
+
+                    Optional Monitoring Service
+                    (Watches orders, triggers contracts)
 ```
+
+## Key Architecture Changes
+
+1. **Resolver = Smart Contracts** (not just service)
+2. **Users control secrets** (not resolver)
+3. **Orders filled via LOP** (not event monitoring)
+4. **Atomic operations** (order fill + escrow deploy)
 
 ## Prerequisites
 
@@ -47,49 +57,63 @@ stellar contract deploy \
 export STELLAR_CONTRACT_ID="CONTRACT_ID_HERE"
 ```
 
-### 2. Resolver Service Setup
+### 2. Resolver Smart Contract Deployment (NEW REQUIREMENT)
+
+First, deploy the resolver contracts on both chains:
+
+#### Ethereum Resolver Contract
+```bash
+# Deploy resolver contract
+cd contracts/ethereum
+npx hardhat run scripts/deploy-resolver.ts --network sepolia
+
+# Note the resolver contract address
+export ETH_RESOLVER_ADDRESS="0x..."
+```
+
+#### Stellar Resolver Contract
+```bash
+# Build and deploy Stellar resolver
+cd stellar-fusion/resolver
+cargo build --target wasm32-unknown-unknown --release
+
+stellar contract deploy \
+  --wasm target/wasm32-unknown-unknown/release/resolver.wasm \
+  --source YOUR_SECRET_KEY \
+  --network testnet
+
+# Note the resolver contract ID
+export STELLAR_RESOLVER_ID="C..."
+```
+
+### 3. Optional Monitoring Service Setup
+
+The monitoring service is now optional and only watches for profitable orders:
 
 ```bash
 cd src/services/resolver
 
-# Create .env file
+# Update .env for new architecture
 cat > .env << EOF
-# Stellar Configuration
-STELLAR_NETWORK=testnet
-STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
-STELLAR_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
-STELLAR_CONTRACT_ID=$STELLAR_CONTRACT_ID
-STELLAR_RESOLVER_SECRET=YOUR_STELLAR_SECRET_KEY
+# Contract Addresses (not generating secrets!)
+ETH_RESOLVER_CONTRACT=$ETH_RESOLVER_ADDRESS
+STELLAR_RESOLVER_CONTRACT=$STELLAR_RESOLVER_ID
 
-# Ethereum Configuration  
-ETHEREUM_NETWORK=sepolia
+# Network Configuration
 ETHEREUM_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
-ETHEREUM_RESOLVER_ADDRESS=0x...
-ETHEREUM_RESOLVER_PRIVATE_KEY=0x...
+STELLAR_RPC_URL=https://soroban-testnet.stellar.org
 
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/fusion
-REDIS_URL=redis://localhost:6379
+# 1inch Integration
+ONEINCH_API_KEY=your_api_key_here
+ONEINCH_ORDER_API=wss://api.1inch.dev/fusion/orders
 
 # Service Configuration
 PORT=3001
 LOG_LEVEL=info
-
-# 1inch API Configuration
-ONEINCH_API_KEY=your_api_key_here
 EOF
 
-# Start dependencies
-docker-compose -f ../../../docker-compose.resolver.yml up -d
-
-# Install dependencies
-npm install
-
-# Run database migrations
-npm run migrate
-
-# Start the resolver service
-npm run dev
+# Start the monitoring service (optional)
+npm run monitor:dev
 ```
 
 ### 3. Frontend Configuration
@@ -150,15 +174,14 @@ npm run resolver:dev # Resolver service
 npm run dev         # Frontend
 ```
 
-## Wallet Integration
+## Updated Wallet Integration
 
-### 1. MetaMask Setup (Ethereum)
-
-Add the following to your frontend:
+### 1. MetaMask Setup with Secret Generation
 
 ```typescript
 // src/hooks/useMetaMask.ts
 import { ethers } from 'ethers';
+import { randomBytes } from 'crypto';
 
 export const useMetaMask = () => {
   const connect = async () => {
@@ -174,7 +197,14 @@ export const useMetaMask = () => {
     return { provider, signer };
   };
   
-  return { connect };
+  // NEW: User generates secret for cross-chain swap
+  const generateSwapSecret = () => {
+    const secret = randomBytes(32);
+    const hashlock = ethers.keccak256(secret);
+    return { secret: ethers.hexlify(secret), hashlock };
+  };
+  
+  return { connect, generateSwapSecret };
 };
 ```
 
@@ -199,39 +229,39 @@ export const useFreighter = () => {
 };
 ```
 
-## API Endpoints
+## Updated API Flow
 
-The resolver service exposes the following endpoints:
+### 1. Create Order with User's Secret
+```typescript
+// Frontend creates order with user's hashlock
+const { secret, hashlock } = generateSwapSecret();
 
-### Health Check
-```
-GET http://localhost:3001/health
-```
+const order = await fusionSDK.createOrder({
+  // ... order parameters
+  hashLock: hashlock, // User's hashlock, not resolver's!
+});
 
-### Create Swap
-```
-POST http://localhost:3001/api/swaps
-Content-Type: application/json
-
-{
-  "sourceChain": "ethereum",
-  "destChain": "stellar",
-  "sourceToken": "0x...",
-  "destToken": "USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
-  "amount": "1000000000000000000",
-  "maker": "0x...",
-  "taker": "G..."
-}
+// Store secret securely client-side
+localStorage.setItem(`secret-${order.orderHash}`, secret);
 ```
 
-### Get Swap Status
-```
-GET http://localhost:3001/api/swaps/{swapId}
+### 2. Resolver Fills Order (Smart Contract)
+```solidity
+// Resolver contract fills order atomically
+resolverContract.deploySrc(
+  immutables,
+  order,
+  signature,
+  takerTraits,
+  amount
+);
 ```
 
-### List Active Swaps
-```
-GET http://localhost:3001/api/swaps?status=active
+### 3. User Reveals Secret
+```typescript
+// User reveals secret to withdraw on destination
+const secret = localStorage.getItem(`secret-${orderHash}`);
+await destinationEscrow.withdraw(secret);
 ```
 
 ## Testing the Integration

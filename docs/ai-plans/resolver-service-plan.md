@@ -1,232 +1,300 @@
-# Resolver Service Plan
+# Resolver Smart Contract Plan
+
+## ⚠️ ARCHITECTURAL REVISION REQUIRED
+
+Based on the 1inch cross-chain resolver example, our current implementation has fundamental architectural issues. This document has been updated to reflect the correct architecture.
 
 ## Objective and Success Criteria
 
 ### Objective
-Build a robust resolver service that monitors cross-chain escrow creation, manages secret distribution, handles withdrawals and cancellations, and bridges communication between Stellar and Ethereum networks.
+Build a resolver system that consists of:
+1. **Smart Contracts** on each chain that fill orders through the 1inch Limit Order Protocol
+2. **Optional Service** for monitoring profitable orders and triggering contract actions
 
 ### Success Criteria
-- [x] Automated monitoring of escrow events on both chains ✅
-- [x] Reliable cross-chain message relay within 30 seconds ✅
-- [x] Secret management with secure storage and distribution ✅
-- [x] Automatic handling of timelock expirations ✅
-- [x] 99.9% uptime with failover mechanisms ✅
-- [x] Support for concurrent swap processing ✅
-- [x] Comprehensive logging and monitoring ✅
+- [ ] Resolver smart contracts deployed on Ethereum and Stellar
+- [ ] Integration with 1inch Limit Order Protocol for order filling
+- [ ] Atomic escrow deployment with order filling
+- [ ] User-controlled secret management (NOT resolver-controlled)
+- [ ] Cross-chain coordination without generating secrets
+- [ ] Profitable order detection and execution
 
-## Implementation Status (January 25, 2025)
-✅ **Complete** - All core functionality implemented and tested (24/24 tests passing)
+## Current Implementation Issues
+❌ **INCORRECT** - Current implementation misunderstands the resolver role:
+- Treats resolver as only an event-monitoring service
+- Resolver generates and controls secrets (should be user-controlled)
+- No integration with Limit Order Protocol
+- Escrows deployed reactively instead of atomically
 
-## Tasks
+## Correct Architecture
 
-### [x] Main Task 1: Core Architecture Setup ✅
-  - [x] Subtask 1.1: Service framework
-    - [x] Set up TypeScript Node.js project structure
-    - [x] Configure dependency injection container
-    - [x] Implement modular service architecture
-    - [x] Set up configuration management
-  - [x] Subtask 1.2: Database design
-    - [x] Design schema for swap tracking
-    - [x] Create tables for secret storage
-    - [x] Implement event log storage
-    - [x] Set up database migrations
-  - [x] Subtask 1.3: Message queue setup
-    - [x] Configure Redis for job queuing
-    - [x] Implement retry mechanisms
-    - [x] Set up dead letter queues
-    - [x] Create job priority system
+### 1. Resolver Smart Contracts (Primary Component)
 
-### [x] Main Task 2: Chain Monitoring Implementation ✅
-  - [ ] Subtask 2.1: Ethereum event monitoring
-    - [ ] Set up Web3 provider connections
-    - [ ] Implement event filter for escrow creation
-    - [ ] Create block reorganization handling
-    - [ ] Add event parsing and validation
-  - [ ] Subtask 2.2: Stellar event monitoring
-    - [ ] Connect to Horizon API and Soroban RPC
-    - [ ] Implement streaming for escrow events
-    - [ ] Handle Stellar-specific event formats
-    - [ ] Create XDR decoding utilities
-  - [ ] Subtask 2.3: Event processing pipeline
-    - [ ] Normalize events from both chains
-    - [ ] Implement deduplication logic
-    - [ ] Create event routing system
-    - [ ] Add event persistence layer
+#### Ethereum Resolver Contract
+```solidity
+contract Resolver is Ownable {
+    IEscrowFactory private immutable _FACTORY;
+    IOrderMixin private immutable _LOP;
+    
+    // Fill order through LOP and deploy escrow atomically
+    function deploySrc(
+        IBaseEscrow.Immutables calldata immutables,
+        IOrderMixin.Order calldata order,
+        bytes32 r,
+        bytes32 vs,
+        uint256 amount,
+        TakerTraits takerTraits
+    ) external payable onlyOwner {
+        // 1. Send safety deposit to escrow address
+        // 2. Fill order through Limit Order Protocol
+        // Order filling triggers escrow deployment
+    }
+    
+    // Deploy destination escrow
+    function deployDst(
+        IBaseEscrow.Immutables calldata dstImmutables,
+        uint256 srcCancellationTimestamp
+    ) external payable onlyOwner {
+        _FACTORY.createDstEscrow{value: msg.value}(dstImmutables, srcCancellationTimestamp);
+    }
+    
+    // User or resolver can withdraw with secret
+    function withdraw(IEscrow escrow, bytes32 secret) external;
+    
+    // Cancel escrow after timelock
+    function cancel(IEscrow escrow) external;
+}
+```
 
-### [ ] Main Task 3: Cross-Chain Orchestration
-  - [ ] Subtask 3.1: Escrow deployment logic
-    - [ ] Detect source chain escrow creation
-    - [ ] Calculate destination escrow parameters
-    - [ ] Deploy matching escrow on destination
-    - [ ] Handle deployment failures
-  - [ ] Subtask 3.2: State synchronization
-    - [ ] Track escrow states across chains
-    - [ ] Implement state machine for swaps
-    - [ ] Handle out-of-sync scenarios
-    - [ ] Create reconciliation process
-  - [ ] Subtask 3.3: Transaction management
-    - [ ] Implement gas price optimization
-    - [ ] Handle transaction retries
-    - [ ] Manage nonce/sequence numbers
-    - [ ] Create transaction monitoring
+#### Stellar Resolver Contract (To Be Implemented)
+- Similar functionality adapted for Stellar/Soroban
+- Must interact with Stellar HTLC contracts
+- Handle XLM and Stellar asset transfers
 
-### [ ] Main Task 4: Secret Management System
-  - [ ] Subtask 4.1: Secret generation
-    - [ ] Create cryptographically secure secrets
-    - [ ] Implement secret hashing
-    - [ ] Generate Merkle trees for partial fills
-    - [ ] Store secrets securely
-  - [ ] Subtask 4.2: Secret distribution
-    - [ ] Implement reveal timing logic
-    - [ ] Create secure transmission methods
-    - [ ] Handle secret reveal coordination
-    - [ ] Manage partial fill secrets
-  - [ ] Subtask 4.3: Security measures
-    - [ ] Encrypt secrets at rest
-    - [ ] Implement access controls
-    - [ ] Add audit logging
-    - [ ] Create key rotation system
+### 2. Optional Resolver Service (Secondary Component)
 
-### [ ] Main Task 5: Timelock Management
-  - [ ] Subtask 5.1: Timelock tracking
-    - [ ] Monitor all active timelocks
-    - [ ] Calculate expiration times
-    - [ ] Create notification system
-    - [ ] Implement countdown tracking
-  - [ ] Subtask 5.2: Automated actions
-    - [ ] Trigger withdrawals at appropriate times
-    - [ ] Handle cancellations when needed
-    - [ ] Implement safety checks
-    - [ ] Create fallback mechanisms
-  - [ ] Subtask 5.3: Priority handling
-    - [ ] Prioritize near-expiry actions
-    - [ ] Implement queue jumping for urgent tasks
-    - [ ] Create escalation procedures
-    - [ ] Add manual override capabilities
+The service monitors profitable orders and triggers smart contract actions:
 
-### [ ] Main Task 6: High Availability Features
-  - [ ] Subtask 6.1: Service redundancy
-    - [ ] Implement active-passive failover
-    - [ ] Create health check endpoints
-    - [ ] Set up load balancing
-    - [ ] Implement circuit breakers
-  - [ ] Subtask 6.2: Data redundancy
-    - [ ] Set up database replication
-    - [ ] Implement cache redundancy
-    - [ ] Create backup strategies
-    - [ ] Test restore procedures
-  - [ ] Subtask 6.3: Monitoring and alerting
-    - [ ] Set up comprehensive metrics
-    - [ ] Create custom dashboards
-    - [ ] Implement intelligent alerts
-    - [ ] Add anomaly detection
+```typescript
+interface ResolverService {
+  // Monitor 1inch order broadcasts
+  watchOrders(): AsyncGenerator<FusionOrder>;
+  
+  // Calculate profitability
+  evaluateOrder(order: FusionOrder): ProfitAnalysis;
+  
+  // Trigger smart contract to fill order
+  fillOrder(order: FusionOrder): Promise<TxHash>;
+  
+  // Monitor for secret reveals (NOT generate secrets)
+  watchSecretReveals(): AsyncGenerator<SecretReveal>;
+}
+```
+
+## Revised Tasks
+
+### [ ] Main Task 1: Resolver Smart Contracts
+  - [ ] Subtask 1.1: Ethereum Resolver Contract
+    - [ ] Create Solidity contract inheriting from Ownable
+    - [ ] Add immutable references to EscrowFactory and LOP
+    - [ ] Implement deploySrc function with atomic order filling
+    - [ ] Implement deployDst function for destination escrow
+    - [ ] Add withdraw and cancel functions
+    - [ ] Test with 1inch mainnet fork
+  - [ ] Subtask 1.2: Stellar Resolver Contract
+    - [ ] Create Soroban contract with similar functionality
+    - [ ] Adapt for Stellar's transaction model
+    - [ ] Handle XLM and Stellar asset transfers
+    - [ ] Implement cross-contract calls to HTLC
+    - [ ] Test on Stellar testnet
+  - [ ] Subtask 1.3: Contract Security
+    - [ ] Add access control (onlyOwner modifiers)
+    - [ ] Implement reentrancy guards
+    - [ ] Add input validation
+    - [ ] Handle edge cases and failures
+
+### [ ] Main Task 2: Limit Order Protocol Integration
+  - [ ] Subtask 2.1: Order Filling Logic
+    - [ ] Integrate with IOrderMixin interface
+    - [ ] Implement fillOrderArgs with proper parameters
+    - [ ] Handle TakerTraits encoding
+    - [ ] Set up atomic escrow deployment
+  - [ ] Subtask 2.2: Order Validation
+    - [ ] Verify order signatures
+    - [ ] Check order parameters
+    - [ ] Validate auction timing
+    - [ ] Ensure resolver is whitelisted
+  - [ ] Subtask 2.3: Safety Deposit Handling
+    - [ ] Calculate required safety deposits
+    - [ ] Send deposits atomically with order fill
+    - [ ] Handle deposit returns
+    - [ ] Track deposit states
+
+### [ ] Main Task 3: Cross-Chain Coordination (No Secret Generation!)
+  - [ ] Subtask 3.1: Order Monitoring
+    - [ ] Monitor 1inch order broadcasts
+    - [ ] Filter for profitable opportunities
+    - [ ] Check resolver whitelist status
+    - [ ] Calculate Dutch auction prices
+  - [ ] Subtask 3.2: Escrow Deployment
+    - [ ] Deploy source escrow via order fill
+    - [ ] Calculate destination parameters
+    - [ ] Deploy destination escrow
+    - [ ] Track deployment status
+  - [ ] Subtask 3.3: Secret Monitoring (NOT Generation)
+    - [ ] Watch for user's secret reveal
+    - [ ] Detect SecretRevealed events
+    - [ ] Use revealed secret for withdrawal
+    - [ ] Handle withdrawal timing
+
+### [ ] Main Task 4: Optional Monitoring Service
+  - [ ] Subtask 4.1: Order Monitoring Service
+    - [ ] Connect to 1inch order broadcast system
+    - [ ] Implement WebSocket connection
+    - [ ] Parse Fusion+ order format
+    - [ ] Filter for supported chains
+  - [ ] Subtask 4.2: Profitability Analysis
+    - [ ] Calculate swap profitability
+    - [ ] Factor in gas costs
+    - [ ] Consider slippage and fees
+    - [ ] Implement bidding strategy
+  - [ ] Subtask 4.3: Contract Interaction
+    - [ ] Trigger resolver contract functions
+    - [ ] Monitor transaction status
+    - [ ] Handle failures and retries
+    - [ ] Track performance metrics
+
+### [ ] Main Task 5: Correct Flow Implementation
+  - [ ] Subtask 5.1: User Order Creation
+    - [ ] User generates secret and hashlock
+    - [ ] User creates order with 1inch SDK
+    - [ ] Order includes user's hashlock
+    - [ ] Order broadcast to resolvers
+  - [ ] Subtask 5.2: Resolver Order Filling
+    - [ ] Resolver evaluates profitability
+    - [ ] Resolver fills order via smart contract
+    - [ ] Source escrow deployed atomically
+    - [ ] Resolver deploys destination escrow
+  - [ ] Subtask 5.3: Secret Reveal Flow
+    - [ ] User validates destination escrow
+    - [ ] User reveals secret to withdraw
+    - [ ] Resolver detects secret reveal
+    - [ ] Resolver withdraws using revealed secret
 
 ## Technical Considerations
 
-### Architecture Patterns
-1. **Event Sourcing**: Store all events for audit and replay
-2. **CQRS**: Separate read and write models for performance
-3. **Saga Pattern**: Manage distributed transactions
-4. **Circuit Breaker**: Prevent cascade failures
-5. **Bulkhead**: Isolate critical components
+### Smart Contract Architecture
+1. **Atomic Operations**: Order fill and escrow deploy in single transaction
+2. **Access Control**: Only resolver owner can fill orders
+3. **Gas Optimization**: Minimize storage operations
+4. **Upgradability**: Consider proxy pattern for updates
+5. **Cross-chain Addressing**: Deterministic address calculation
 
-### Performance Optimization
-1. **Connection Pooling**: Reuse RPC connections
-2. **Batch Processing**: Group similar operations
-3. **Caching Strategy**: Cache chain data appropriately
-4. **Async Processing**: Non-blocking operations throughout
-5. **Resource Limits**: Implement proper throttling
+### Integration Requirements
+1. **1inch LOP**: Must implement IOrderMixin interface
+2. **EscrowFactory**: Interact with factory for deployments
+3. **TakerTraits**: Proper encoding for order parameters
+4. **Signature Verification**: Validate order signatures
+5. **Whitelist Checking**: Ensure resolver is authorized
 
 ### Security Considerations
-1. **Private Key Security**: Use HSM/KMS for key storage
-2. **API Authentication**: Secure all endpoints
-3. **Rate Limiting**: Prevent abuse and DDoS
-4. **Input Validation**: Sanitize all external data
-5. **Audit Trail**: Comprehensive logging of all actions
+1. **No Secret Generation**: Users control their secrets
+2. **Front-running Protection**: Use commit-reveal where needed
+3. **Reentrancy Guards**: Protect against recursive calls
+4. **Input Validation**: Verify all external inputs
+5. **Access Control**: Strict permission management
 
-### Error Handling
-1. **Retry Logic**: Exponential backoff for transient failures
-2. **Dead Letter Queue**: Handle permanently failed jobs
-3. **Graceful Degradation**: Continue operating with reduced functionality
-4. **Error Classification**: Distinguish between recoverable and fatal errors
-5. **Manual Intervention**: Clear procedures for manual fixes
+### Cross-Chain Challenges
+1. **Address Format**: Handle 20-byte (EVM) vs 32-byte (Stellar)
+2. **Asset Mapping**: Map between chain-specific tokens
+3. **Time Synchronization**: Handle chain time differences
+4. **Transaction Models**: Adapt between different chains
+5. **Event Formats**: Normalize cross-chain events
 
-## Files That Will Be Affected
+## Files That Need Major Changes
 
-### New Files to Create
-- `src/services/resolver/` - Main resolver service
-  - `ResolverService.ts` - Core service class
-  - `ChainMonitor.ts` - Base monitoring class
-  - `EthereumMonitor.ts` - Ethereum-specific monitoring
-  - `StellarMonitor.ts` - Stellar-specific monitoring
-  - `SecretManager.ts` - Secret handling
-  - `TimelockManager.ts` - Timelock tracking
-  - `SwapOrchestrator.ts` - Cross-chain coordination
+### Smart Contracts (NEW)
+- `contracts/ethereum/` - Ethereum contracts
+  - `Resolver.sol` - Main resolver contract
+  - `interfaces/IResolver.sol` - Resolver interface
+  - `test/Resolver.test.ts` - Contract tests
 
-- `src/services/resolver/utils/` - Utility functions
-  - `eventParser.ts` - Event parsing utilities
-  - `addressTranslator.ts` - Cross-chain address mapping
-  - `retryHandler.ts` - Retry logic implementation
-  - `healthCheck.ts` - Service health monitoring
+- `stellar-fusion/resolver/` - Stellar contracts
+  - `resolver.rs` - Soroban resolver contract
+  - `lib.rs` - Contract entry point
+  - `test.rs` - Contract tests
 
-- `src/database/` - Database layer
-  - `models/Swap.ts` - Swap data model
-  - `models/Secret.ts` - Secret storage model
-  - `models/Event.ts` - Event log model
-  - `repositories/` - Data access layer
+### Service Files (REWRITE NEEDED)
+- `src/services/resolver/` - Current implementation is incorrect
+  - `ResolverService.ts` - Needs complete rewrite
+  - `SwapOrchestrator.ts` - Remove secret generation
+  - `SecretManager.ts` - Change to secret monitoring only
+  - ❌ Remove all secret generation logic
+  - ❌ Remove event-based escrow deployment
+  - ✅ Add order monitoring
+  - ✅ Add contract interaction
 
-### Configuration Files
-- `config/resolver.json` - Resolver configuration
-- `config/chains.json` - Chain-specific settings
-- `.env.resolver` - Environment variables
-- `docker-compose.resolver.yml` - Container setup
+### Integration Files (UPDATE)
+- `src/services/1inch/` - 1inch integration
+  - `OrderMonitor.ts` - Monitor order broadcasts
+  - `LimitOrderProtocol.ts` - LOP integration
+  - `FusionSDK.ts` - Order parsing
 
-### Test Files
-- `test/resolver/` - Resolver tests
-  - `monitoring.test.ts` - Monitoring tests
-  - `orchestration.test.ts` - Orchestration tests
-  - `secrets.test.ts` - Secret management tests
-  - `integration.test.ts` - Full flow tests
+### Configuration (UPDATE)
+- `.env.example` - Add resolver contract addresses
+- `config/chains.ts` - Add resolver configurations
+- `hardhat.config.ts` - Add resolver deployment
 
 ## Dependencies
 
-### Core Dependencies
+### Smart Contract Dependencies
+```json
+{
+  "@1inch/limit-order-protocol": "^4.0.0",
+  "@1inch/fusion-sdk": "^3.0.0",
+  "@openzeppelin/contracts": "^4.9.0",
+  "hardhat": "^2.19.0",
+  "@nomicfoundation/hardhat-ethers": "^3.0.0"
+}
+```
+
+### Service Dependencies (if implementing optional service)
 ```json
 {
   "ethers": "^6.9.0",
   "stellar-sdk": "^11.0.0",
-  "@stellar/soroban-client": "^1.0.0",
-  "bull": "^4.11.0",
-  "ioredis": "^5.3.0",
-  "winston": "^3.11.0",
-  "pg": "^8.11.0"
+  "@1inch/fusion-sdk": "^3.0.0",
+  "ws": "^8.15.0",
+  "winston": "^3.11.0"
 }
 ```
 
-### Monitoring Dependencies
-```json
-{
-  "prom-client": "^15.0.0",
-  "express": "^4.18.0",
-  "@sentry/node": "^7.80.0",
-  "node-statsd": "^0.1.1"
-}
+### Stellar Dependencies
+```toml
+[dependencies]
+soroban-sdk = "20.0.0"
 ```
 
-### Development Dependencies
-```json
-{
-  "@types/node": "^20.0.0",
-  "tsx": "^4.0.0",
-  "vitest": "^1.0.0",
-  "docker-compose": "^0.24.0"
-}
-```
+## Critical Differences from Current Implementation
 
-## Risk Mitigation
+### ❌ What We Got Wrong
+1. **Resolver generates secrets** - Users must control secrets
+2. **Event-driven architecture** - Should be order-driven
+3. **Reactive escrow deployment** - Must be atomic with order fill
+4. **No LOP integration** - Essential for 1inch compatibility
+5. **Service-only approach** - Smart contracts are primary
 
-1. **Chain Downtime**: Implement fallback RPC providers and retry logic
-2. **Secret Exposure**: Use encryption and secure key management
-3. **MEV Attacks**: Implement commit-reveal patterns where needed
-4. **Resource Exhaustion**: Set limits and implement circuit breakers
-5. **Data Corruption**: Regular backups and integrity checks 
+### ✅ Correct Approach
+1. **Smart contract resolver** - Fills orders on-chain
+2. **User controls secrets** - Resolver never generates
+3. **Atomic operations** - Order fill triggers escrow
+4. **LOP integration** - Use 1inch infrastructure
+5. **Optional service** - Only for monitoring/triggering
+
+## Next Steps
+
+1. **Stop current development** on incorrect service architecture
+2. **Design resolver smart contracts** for both chains
+3. **Study 1inch example** more thoroughly
+4. **Update all documentation** to reflect correct architecture
+5. **Plan migration** from current incorrect implementation 

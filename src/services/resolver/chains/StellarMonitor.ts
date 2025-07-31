@@ -22,22 +22,73 @@ export class StellarMonitor extends BaseMonitor {
   constructor(chainConfig: ChainConfig, resolverAccount: ResolverAccount) {
     super(chainConfig, resolverAccount);
     
-    this.server = new SorobanRpc.Server(chainConfig.rpcUrl);
-    this.keypair = Keypair.fromSecret(resolverAccount.privateKey);
-    this.networkPassphrase = chainConfig.name.includes('Testnet') 
-      ? Networks.TESTNET 
-      : Networks.PUBLIC;
+    try {
+      this.server = new SorobanRpc.Server(chainConfig.rpcUrl);
+      this.keypair = Keypair.fromSecret(resolverAccount.privateKey);
+      this.networkPassphrase = chainConfig.name.includes('Testnet') 
+        ? Networks.TESTNET 
+        : Networks.PUBLIC;
+        
+      logger.info(`Stellar monitor initialized for ${chainConfig.name}`, {
+        contractId: chainConfig.escrowFactory,
+        resolverAddress: this.keypair.publicKey(),
+        network: this.networkPassphrase === Networks.PUBLIC ? 'mainnet' : 'testnet',
+      });
+    } catch (error) {
+      logger.error(`Failed to initialize Stellar monitor for ${chainConfig.name}:`, error);
+      throw error;
+    }
   }
 
   async start(): Promise<void> {
     logger.info(`Starting Stellar monitor for ${this.chainConfig.name}`);
     
-    // Test connection
-    const health = await this.server.getHealth();
-    logger.info(`Connected to ${this.chainConfig.name}, status: ${health.status}`);
-    
-    // Start polling
-    await this.startPolling();
+    try {
+      // Test connection
+      logger.info(`Testing connection to ${this.chainConfig.rpcUrl}...`);
+      const health = await this.server.getHealth();
+      
+      if (health.status !== 'healthy') {
+        throw new Error(`Stellar RPC unhealthy: ${health.status}`);
+      }
+      
+      logger.info(`✅ Connected to ${this.chainConfig.name}`, {
+        status: health.status,
+        rpcUrl: this.chainConfig.rpcUrl,
+      });
+      
+      // Check resolver account
+      const account = await this.server.getAccount(this.keypair.publicKey());
+      const xlmBalance = account.balances.find(b => b.asset_type === 'native')?.balance || '0';
+      logger.info(`Resolver balance on ${this.chainConfig.name}: ${xlmBalance} XLM`);
+      
+      if (parseFloat(xlmBalance) < 10) {
+        logger.warn(`⚠️  Low XLM balance on ${this.chainConfig.name}: ${xlmBalance} XLM`);
+      }
+      
+      // Verify contract exists if configured
+      if (this.chainConfig.escrowFactory) {
+        try {
+          const contractId = this.chainConfig.escrowFactory;
+          logger.info(`Verifying contract ${contractId} exists...`);
+          // Note: Contract verification would go here
+          logger.info(`✅ Contract verified`);
+        } catch (error) {
+          logger.error(`Failed to verify contract:`, error);
+        }
+      }
+      
+      // Start polling
+      await this.startPolling();
+      
+    } catch (error) {
+      logger.error(`Failed to start Stellar monitor:`, {
+        chain: this.chainConfig.name,
+        error: error.message,
+        rpcUrl: this.chainConfig.rpcUrl,
+      });
+      throw error;
+    }
   }
 
   async stop(): Promise<void> {

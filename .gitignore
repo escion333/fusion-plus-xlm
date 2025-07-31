@@ -76,3 +76,66 @@ proxy.log
 
 # Verification files
 verification-checklist.md
+
+# AI/Workflow artifacts
+*_SUMMARY.md
+*_GUIDE.md
+*_CHECKLIST.md
+*_REVIEW.md
+*_PROOF.md
+*_OPERATION_*.md
+*_TWEAKS_*.md
+*_UX_*.md
+*_FIX.md
+*_RESULTS.md
+CLI_*.md
+COMPLETE_*.md
+FINAL_*.md
+FRONTEND_*.md
+HACKATHON_*.md
+MAINNET_*.md
+MOCK_*.md
+PROJECT_*.md
+SWAP_*.md
+USDC_*.md
+
+# Build artifacts
+artifacts/
+cache/
+*.cache
+hardhat-network-fork/
+
+# Test results and temporary files
+test-*.js
+test-*.sh
+withdraw.sh
+final-*.json
+contract-id.txt
+*.json
+!package*.json
+!tsconfig*.json
+!components.json
+!foundry.toml
+
+# Stellar specific
+**/test_snapshots/
+Cargo.lock
+
+# TypeScript build info
+tsconfig.tsbuildinfo
+**/tsconfig.tsbuildinfo
+
+# Local test scripts
+scripts/check-*.sh
+scripts/check-*.js
+scripts/complete-*.sh
+scripts/debug-*.sh
+scripts/deploy-*.js
+scripts/fund-*.sh
+scripts/get-*.sh
+scripts/init-*.sh
+scripts/start-*.sh
+scripts/test-*.sh
+scripts/test-*.js
+scripts/withdraw-*.sh
+scripts/wrap-*.sh

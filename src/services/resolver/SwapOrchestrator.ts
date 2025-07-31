@@ -56,17 +56,24 @@ export class SwapOrchestrator extends EventEmitter {
   }
 
   private async processNewSwap(sourceChain: string, event: EscrowEvent): Promise<void> {
-    logger.info(`Creating new swap from ${sourceChain}`, { orderHash: event.orderHash });
+    logger.info(`Creating new swap from ${sourceChain}`, { 
+      orderHash: event.orderHash,
+      escrowAddress: event.escrowAddress,
+      blockNumber: event.blockNumber,
+    });
     
-    // Generate secret for this swap
-    const secretData = this.secretManager.generateSecret(event.orderHash);
-    
-    // Determine destination chain
-    const destinationChain = this.getCounterpartChain(sourceChain);
-    if (!destinationChain) {
-      logger.error(`No counterpart chain for ${sourceChain}`);
-      return;
-    }
+    try {
+      // Generate secret for this swap
+      const secretData = this.secretManager.generateSecret(event.orderHash);
+      logger.info(`Generated secret for order ${event.orderHash}`);
+      
+      // Determine destination chain
+      const destinationChain = this.getCounterpartChain(sourceChain);
+      if (!destinationChain) {
+        throw new Error(`No counterpart chain configured for ${sourceChain}`);
+      }
+      
+      logger.info(`Swap route: ${sourceChain} → ${destinationChain}`);
 
     // Create swap record
     const swap: SwapOrder = {

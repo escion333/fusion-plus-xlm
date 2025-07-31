@@ -2,19 +2,19 @@
 
 ## Project Overview
 
-### Vision
-Build a trustless cross-chain swap protocol enabling seamless value transfer between Ethereum and Stellar networks using 1inch Fusion+ architecture.
+### Vision (Hackathon Focus)
+Demonstrate Stellar integration with 1inch Fusion+ by extending their cross-chain resolver example to support non-EVM chains.
 
 ### Target Bounty
 - **Primary**: 1inch Priority Fusion+ (Stellar) - $12,000 (1st place)
 - **Secondary**: Judges Pick - $1,000 bonus
 - **Total Potential**: $13,000
 
-### Key Differentiators
-1. First Stellar implementation of 1inch Fusion+
-2. Beautiful UI with real-time swap visualization
-3. Partial fills support using Merkle trees
-4. Mainnet deployment demonstrating production readiness
+### Hackathon Strategy
+1. **Extend their example** - Not rebuild from scratch
+2. **Use their mock relayer** - With our resolver whitelisted
+3. **Focus on Stellar innovation** - First non-EVM integration
+4. **Mainnet demo** - Show real working swaps
 
 ## Technical Architecture
 
@@ -43,19 +43,21 @@ Build a trustless cross-chain swap protocol enabling seamless value transfer bet
   - Deploy resolver contract
   - Integration with Limit Order Protocol
 
-#### 3. Resolver Service
-- **Language**: TypeScript/Node.js
-- **Responsibilities**:
-  - Monitor source chain escrow creation
-  - Deploy destination chain escrow
-  - Manage secret distribution
-  - Handle withdrawals and cancellations
-  - Bridge Stellar RPC and Ethereum RPC
+#### 3. Resolver System (HACKATHON APPROACH)
+- **Starting Point**: 1inch cross-chain resolver example
+- **Our Addition**: Stellar extension
 
-**Key Requirements**:
-- Support both Horizon API and Soroban RPC
-- Handle Stellar's different transaction model
-- Manage XDR encoding/decoding for Stellar
+**Extend Their Components**:
+- **MockRelayer**: Add Stellar chain support
+- **Resolver Contracts**: Already exist for Ethereum
+- **Stellar Resolver**: New Soroban contract
+- **Integration**: Minimal changes to their code
+
+**Hackathon Implementation**:
+- Use their existing infrastructure
+- Add Stellar as new destination/source
+- Keep their architecture patterns
+- Focus on working demo, not production
 
 #### 4. Frontend Application
 - **Framework**: Next.js 14 with TypeScript
@@ -65,19 +67,19 @@ Build a trustless cross-chain swap protocol enabling seamless value transfer bet
   - Real-time transaction tracking
   - Wallet integration (MetaMask + Freighter)
 
-### Technical Requirements
+### Hackathon Requirements
 
-#### Mandatory (from 1inch requirements)
-1. **Hashlock/Timelock Functionality**: Preserve on both chains
-2. **Bidirectional Swaps**: ETH→Stellar and Stellar→ETH
-3. **On-chain Demo**: Mainnet or testnet execution
-4. **Consistent Commit History**: Regular, meaningful commits
+#### Must Have (for winning)
+1. **Working Demo**: Show Ethereum ↔ Stellar swap
+2. **Their Infrastructure**: Use mock relayer + example
+3. **Mainnet Proof**: Real transactions, not testnet
+4. **Clean Extension**: Build on their patterns
 
-#### Stretch Goals (for higher scoring)
-1. **UI**: Beautiful, intuitive interface ✓
-2. **Partial Fills**: Merkle tree implementation ✓
-3. **Relayer/Resolver**: Full implementation ✓
-4. **Mainnet Deployment**: Both networks ✓
+#### Nice to Have (if time permits)
+1. **Beautiful UI**: Already mostly done
+2. **Partial Fills**: Can demo concept
+3. **Multiple Swaps**: Show reliability
+4. **Documentation**: Clear explanation
 
 ## Implementation Details
 
@@ -159,172 +161,174 @@ pub trait CrossChainEscrow {
 - Index calculation: `(orderMakingAmount - remainingMakingAmount + makingAmount - 1) * partsAmount / orderMakingAmount`
 - Store Merkle root in Soroban contract
 
-### Resolver Architecture
-```typescript
-interface StellarResolver {
-  // Monitor Stellar escrow events
-  watchStellarEscrows(): AsyncGenerator<EscrowEvent>;
-  
-  // Deploy corresponding EVM escrow
-  deployEVMCounterpart(stellarEscrow: EscrowData): Promise<string>;
-  
-  // Submit secret to Stellar
-  revealSecretOnStellar(secret: string, escrowId: string): Promise<void>;
-  
-  // Handle timelock expirations
-  processTimelocks(): Promise<void>;
+### Correct Resolver Architecture
+
+#### Smart Contract (Primary)
+```solidity
+contract Resolver is Ownable {
+    IEscrowFactory private immutable _FACTORY;
+    IOrderMixin private immutable _LOP;
+    
+    // Fill order and deploy escrow atomically
+    function deploySrc(
+        IBaseEscrow.Immutables calldata immutables,
+        IOrderMixin.Order calldata order,
+        bytes32 r,
+        bytes32 vs,
+        uint256 amount,
+        TakerTraits takerTraits
+    ) external payable onlyOwner;
+    
+    // Deploy destination escrow
+    function deployDst(
+        IBaseEscrow.Immutables calldata dstImmutables
+    ) external payable onlyOwner;
+    
+    // Withdraw using user-revealed secret
+    function withdraw(IEscrow escrow, bytes32 secret) external;
 }
 ```
 
-### 1inch Integration Requirements
-1. **API Integration**:
-   - 1inch Developer Portal API key required
-   - Proxy implementation for CORS handling
-   - Integration with Fusion SDK for order formatting
+#### Service (Optional)
+```typescript
+interface ResolverService {
+  // Monitor profitable orders (NOT escrows)
+  watchOrders(): AsyncGenerator<FusionOrder>;
+  
+  // Trigger contract to fill order
+  fillOrder(order: FusionOrder): Promise<TxHash>;
+  
+  // Watch for user's secret reveal
+  watchSecretReveals(): AsyncGenerator<SecretReveal>;
+}
+```
 
-2. **Resolver Network**:
-   - KYC/whitelisting required for production resolvers
-   - Connection to 1inch order broadcast system
-   - Integration with 1inch relayer for secret distribution
+### Hackathon Integration Approach
+1. **Use Their Example**:
+   - Start with working Ethereum ↔ BSC code
+   - Study their MockRelayer implementation
+   - Understand their resolver pattern
+   - Extend, don't replace
 
-3. **Testing Strategy**:
-   - No testnet available - use mainnet fork
-   - Mock resolver system for demo purposes
-   - Local simulation of cross-chain flow
+2. **Add Stellar Support**:
+   - Create Stellar resolver contract
+   - Add StellarMonitor to relayer
+   - Implement address mapping
+   - Handle Stellar-specific logic
 
-4. **Order Flow**:
-   - Maker creates order using 1inch Fusion SDK
-   - Order broadcast through 1inch network
-   - Resolvers compete in Dutch auction
-   - Winner creates escrows on both chains
+3. **Demo Requirements**:
+   - Create orders locally (no API)
+   - Whitelist our resolver in mock
+   - Show successful swaps
+   - Prove it works on mainnet
 
-## Development Timeline (Actual Progress)
+4. **Key Messages**:
+   - "We extended 1inch to non-EVM"
+   - "Stellar integration is working"
+   - "Path to production is clear"
+   - "First of many non-EVM chains"
 
-### Phase 1: Foundation ✅ COMPLETE
-- [x] Set up Stellar development environment
-- [x] Study 1inch Solana Rust implementation for patterns
-- [x] Implement full Stellar HTLC contract in Soroban
-- [x] Test all functionality with XLM and Stellar assets (14 tests passing)
-- [x] Implement deterministic address calculation
-- [x] Port timelock bit-packing logic to Rust (7-stage timelocks)
-- [x] Add safety deposit mechanisms
-- [x] Complete event emission system
+## Progress & Hackathon Plan
 
-### Phase 2: Integration ✅ COMPLETE
-- [x] Build complete resolver service with Stellar SDK (24 tests passing)
-- [x] Implement cross-chain monitoring for both chains
-- [x] Handle Stellar's different transaction model
-- [x] Add secret generation and management
-- [x] Implement timelock tracking system
-- [x] Create high-availability architecture
-- [x] Add database persistence layer
+### What We Have ✅
+- **Stellar HTLC Contract**: Working, deployed, tested
+- **Frontend**: Beautiful UI with wallets integrated
+- **Basic Architecture**: Understanding of requirements
+- **Documentation**: Comprehensive guides
 
-### Phase 3: Frontend & UI ✅ COMPLETE
-- [x] Build beautiful swap interface with Next.js 14
-- [x] Implement MetaMask wallet integration
-- [x] Implement Freighter wallet integration
-- [x] Connect frontend to resolver API
-- [x] Add real-time resolver status display
-- [x] Create responsive design with Tailwind CSS
-- [x] Add transaction state management
+### What We Need (Hackathon Focus) 🎯
 
-### Phase 4: Documentation & Testing ✅ COMPLETE
-- [x] Create comprehensive integration guide
-- [x] Write testnet deployment documentation
-- [x] Test all builds thoroughly (all passing)
-- [x] Create Docker infrastructure
-- [x] Write API documentation
-- [x] Update all project documentation
+#### Days 1-2: Foundation
+- [ ] Clone 1inch resolver example
+- [ ] Get Ethereum ↔ BSC working
+- [ ] Study their architecture
+- [ ] Plan Stellar extension
 
-### Phase 5: 1inch Integration 🚧 IN PROGRESS
-- [ ] Set up mainnet fork for local testing
-- [ ] Implement 1inch API proxy for CORS handling
-- [ ] Integrate 1inch Fusion SDK for order creation
-- [ ] Create mock resolver system for demo
-- [ ] Build local simulation of cross-chain flow
-- [ ] Document production resolver integration
+#### Days 3-5: Stellar Contracts
+- [ ] Create Stellar resolver contract
+- [ ] Deploy to mainnet
+- [ ] Test basic operations
+- [ ] Verify compatibility
 
-### Phase 6: Demo & Presentation 📋 PLANNED
-- [ ] Create compelling demo video
-- [ ] Show theoretical production flow
-- [ ] Highlight Stellar innovation
-- [ ] Prepare presentation materials
+#### Days 6-7: Relayer Extension
+- [ ] Extend MockRelayer for Stellar
+- [ ] Add StellarMonitor class
+- [ ] Implement chain handlers
+- [ ] Test integration
 
-### Stretch Goals 📋 PLANNED
-- [ ] Implement Merkle tree for partial fills
-- [ ] Add real-time swap progress visualization
-- [ ] Production resolver KYC/whitelisting
-- [ ] Mainnet deployment preparation
+#### Days 8-9: Integration
+- [ ] Connect all components
+- [ ] Create order format
+- [ ] Test full flow
+- [ ] Fix issues
 
-## AI Collaboration Plan
-
-### Claude Responsibilities
-1. **Stellar Contract Development**
-   - Soroban HTLC implementation
-   - Deterministic addressing logic
-   - Asset handling code
-
-2. **Complex Algorithms**
-   - Merkle tree implementation
-   - Timelock bit-packing adaptation
-   - Secret management logic
-
-3. **Cross-Chain Logic**
-   - Message formatting
-   - Address translation
-   - State synchronization
-
-### Human Responsibilities
-1. **Project Management**
-   - Timeline tracking
-   - Integration testing
-   - Documentation
-
-2. **User Experience**
-   - UI/UX design
-   - Frontend development
-   - Demo preparation
-
-3. **System Integration**
-   - Resolver service setup
-   - Deployment scripts
-   - End-to-end testing
-
-## Success Criteria
-
-### Minimum Viable Product
-- [ ] Basic ETH→Stellar→ETH swap working
-- [ ] Testnet deployment functional
-- [ ] Basic UI for swap execution
-- [ ] Video demo of working swap
-
-### Target Product
-- [ ] Full bidirectional swaps
+#### Days 10-11: Testing
 - [ ] Mainnet deployment
-- [ ] Beautiful, intuitive UI
-- [ ] Partial fills support
-- [ ] DeFi integration portal
-- [ ] Comprehensive documentation
+- [ ] Execute test swaps
+- [ ] Document results
+- [ ] Prepare demo
 
-### Winning Features
-- [ ] <10 second cross-chain execution
-- [ ] Live mainnet demo during presentation
-- [ ] Multiple successful swaps demonstrated
-- [ ] Clean, well-commented code
-- [ ] Professional UI/UX
+#### Days 12-14: Polish
+- [ ] Update UI for demo
+- [ ] Create presentation
+- [ ] Record backup video
+- [ ] Final testing
 
-## Risk Mitigation
+## Hackathon Architecture
 
-### Technical Risks
-1. **Stellar Complexity**: Fallback to Polkadot if insurmountable
-2. **Time Constraints**: Prioritize core swap over partial fills
-3. **Mainnet Issues**: Keep testnet demo as backup
+### Build Strategy
+1. **Start with their example**
+   - Don't reinvent the wheel
+   - Use their proven patterns
+   - Extend for Stellar support
+   - Focus on what's unique
 
-### Contingency Plans
-- **Hours 0-24**: If Stellar setup fails, pivot immediately
-- **Hours 24-48**: If integration fails, simplify to basic swap
-- **Hours 48-72**: If UI time runs short, use simple interface
-- **Final Hours**: Focus on demo quality over new features
+2. **Leverage existing work**
+   - Our HTLC contracts work
+   - Frontend mostly complete
+   - Just need integration layer
+   - Time to connect the dots
+
+3. **Demo-first approach**
+   - Working swap > perfect code
+   - Mainnet proof > documentation
+   - Visual impact > edge cases
+   - Story matters most
+
+## Winning Strategy
+
+### Demo Requirements
+- [ ] Show their example working (ETH ↔ BSC)
+- [ ] Show our extension (ETH ↔ Stellar)
+- [ ] Execute on mainnet live
+- [ ] Explain the innovation clearly
+
+### Key Messages
+1. **"First non-EVM integration"**
+2. **"Built on 1inch patterns"**
+3. **"Working on mainnet today"**
+4. **"Path to production clear"**
+
+### Judging Criteria Focus
+- **Innovation**: Stellar is non-EVM ✓
+- **Technical**: Clean extension ✓
+- **Practical**: Actually works ✓
+- **Impact**: Opens new markets ✓
+
+## Hackathon Execution
+
+### Daily Goals
+- **Day 1**: Get their example working
+- **Day 3**: Stellar contracts deployed
+- **Day 7**: Relayer extended
+- **Day 10**: First successful swap
+- **Day 14**: Polished demo ready
+
+### Focus Areas
+1. **Core functionality** over features
+2. **Working demo** over perfect code
+3. **Clear story** over complex details
+4. **Mainnet proof** over documentation
 
 ## Resources & References
 
@@ -349,30 +353,31 @@ interface StellarResolver {
 - Stellar Discord: Soroban help
 - Claude: Complex implementation assistance
 
-## Deliverables
+## Hackathon Deliverables
 
-1. **Smart Contracts**
-   - Stellar HTLC contract (Soroban)
-   - Resolver contract (Solidity)
+1. **Working Demo**
+   - Live Ethereum ↔ Stellar swap
+   - Using 1inch infrastructure
+   - On mainnet networks
+   - Clear success metrics
 
-2. **Backend Services**
-   - Resolver service
-   - Event monitoring system
+2. **Code Extension**
+   - Their example + Stellar
+   - Minimal modifications
+   - Clean integration
+   - Well-documented
 
-3. **Frontend Application**
-   - Swap interface
-   - Transaction tracker
+3. **Presentation**
+   - Problem statement
+   - Solution approach
+   - Live demonstration
+   - Future potential
 
-4. **Documentation**
-   - Technical README
-   - API documentation
-   - Demo video
-   - Presentation slides
-
-5. **Deployment**
-   - Mainnet contracts
-   - Hosted frontend
-   - Public GitHub repo
+4. **Proof Points**
+   - Mainnet transactions
+   - Working resolver
+   - Successful swaps
+   - Innovation clearly shown
 
 ---
 

@@ -4,24 +4,27 @@
 
 ### ✅ Completed Setup
 
-1. **Stellar Contract** (Ready to Deploy)
-   - Optimized WASM binary (6.8KB)
-   - Deployment script: `./scripts/deploy-stellar-mainnet.sh`
+1. **Stellar Contract** (DEPLOYED & VERIFIED)
+   - Production Contract: `CBPL4TVZUM4TAHSRISO4CNNPWAIGMQLUN5MB4MDVZ5ZL3SRRTN56CVNG`
+   - Successfully tested HTLC flow: `CBX3ET3JMZQCQF74YN2PR35ALF3EI73VMYWUX33WKTQMY62I2YR2YWFU`
+   - Native XLM support via SAC: `CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA`
    - Full HTLC implementation with 1inch compatibility
+   - ✅ Verified: Complete deposit → lock → withdraw flow with real XLM
    
 2. **Ethereum Integration**
-   - Using 1inch's existing Escrow Factory: `0xfb742d35dd3a3ca8da4a79ac062064164845c6b9`
+   - Using 1inch's existing Escrow Factory: `0xa7bcb4eac8964306f9e3764f67db6a7af6ddf99a`
    - No additional contracts needed
 
-3. **Environment Configuration**
-   - `.env.mainnet` - Main configuration file
-   - API setup script: `./scripts/setup-mainnet-api.sh`
-   - Test script: `./scripts/test-1inch-api.js`
+3. **Environment Configuration** (CONSOLIDATED)
+   - Single `.env` file (cleaned up from 4 files)
+   - Production-ready configuration
+   - Test wallet configured and funded
 
 4. **Frontend & API Proxy**
    - Mainnet-ready configuration
    - Production build commands
    - 1inch API integration
+   - Cross-chain swap UI functional
 
 ## Quick Start Commands
 
@@ -47,10 +50,10 @@ cd frontend && vercel --prod
 
 ## Required Resources
 
-- [ ] 100+ XLM for Stellar deployment and operations
+- [x] 100+ XLM for Stellar deployment and operations (✅ Using 110 XLM test wallet)
 - [ ] 0.1+ ETH for Ethereum gas fees
-- [ ] 1inch API key from https://portal.1inch.dev/
-- [ ] Test funds for swaps ($50-100 recommended)
+- [x] 1inch API key from https://portal.1inch.dev/ (✅ Configured in .env)
+- [x] Test funds for swaps (✅ Successfully tested with 5 XLM)
 
 ## How Testing Works
 
