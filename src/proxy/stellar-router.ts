@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
 const router = Router();
 
 // Extended resolver service URL
-const EXTENDED_RESOLVER_URL = process.env.EXTENDED_RESOLVER_URL || 'http://localhost:3002';
+const EXTENDED_RESOLVER_URL = process.env.EXTENDED_RESOLVER_URL || 'http://localhost:3003';
 
 // Route Stellar-related orders to our extended resolver
 router.post('/api/fusion/orders/create', async (req: Request, res: Response) => {

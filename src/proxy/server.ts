@@ -95,7 +95,8 @@ const errorHandler = (err: Error, req: Request, res: Response, next: NextFunctio
 const validateQuote = (req: Request, res: Response, next: NextFunction) => {
   try {
     const validated = validateQuoteParams(req.query as Partial<QuoteParams>);
-    (req as QuoteRequest).query = validated;
+    // Store validated params in a custom property instead of overwriting query
+    (req as any).validatedQuery = validated;
     next();
   } catch (err) {
     next(err);
@@ -106,7 +107,8 @@ const validateQuote = (req: Request, res: Response, next: NextFunction) => {
 const validateSwap = (req: Request, res: Response, next: NextFunction) => {
   try {
     const validated = validateSwapParams(req.query as Partial<SwapParams>);
-    (req as SwapRequest).query = validated;
+    // Store validated params in a custom property instead of overwriting query
+    (req as any).validatedQuery = validated;
     next();
   } catch (err) {
     next(err);
@@ -290,8 +292,13 @@ app.post('/api/mock/fusion/orders/create', express.json(), (req: Request, res: R
       order.status = 'executing';
       order.progress = 'processing';
       order.escrowAddresses = {
-        source: '0x' + Math.random().toString(16).substring(2, 40),
-        destination: '0x' + Math.random().toString(16).substring(2, 40),
+        source: '0x' + Math.random().toString(16).substring(2, 42),
+        destination: 'CBX3ET3JMZQCQF74YN2PR35ALF3EI73VMYWUX33WKTQMY62I2YR2YWFU', // Real Stellar contract
+      };
+      // Add initial transaction hashes
+      order.txHashes = {
+        sourceDeployment: '0x' + Math.random().toString(16).substring(2, 66),
+        destinationDeployment: Math.random().toString(16).substring(2, 64), // Stellar format
       };
       mockOrders.set(orderHash, order);
     }
@@ -303,9 +310,11 @@ app.post('/api/mock/fusion/orders/create', express.json(), (req: Request, res: R
       order.status = 'completed';
       order.progress = 'completed';
       order.completedAt = new Date().toISOString();
+      // Update with final transaction hashes
       order.txHashes = {
-        source: '0x' + Math.random().toString(16).substring(2, 64),
-        destination: '0x' + Math.random().toString(16).substring(2, 64),
+        ...order.txHashes,
+        sourceWithdrawal: '0x' + Math.random().toString(16).substring(2, 66),
+        destinationWithdrawal: Math.random().toString(16).substring(2, 64),
       };
       mockOrders.set(orderHash, order);
     }
@@ -397,14 +406,41 @@ app.get('/api/mock/quote', (req: Request, res: Response) => {
     
     res.json({
       fromToken: {
-        symbol: srcToken === '0x0000000000000000000000000000000000000000' ? 'ETH' : 'TOKEN',
-        name: srcToken === '0x0000000000000000000000000000000000000000' ? 'Ethereum' : 'Token',
-        decimals: 18,
+        symbol: (() => {
+          if (srcToken === '0x0000000000000000000000000000000000000000') {
+            // Could be ETH or XLM based on context
+            return 'XLM'; // Default to XLM for Stellar cross-chain
+          } else if (srcToken === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE') {
+            return 'ETH';
+          } else if (srcToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48') {
+            return 'USDC';
+          }
+          return 'TOKEN';
+        })(),
+        name: (() => {
+          if (srcToken === '0x0000000000000000000000000000000000000000') {
+            return 'Stellar Lumens';
+          } else if (srcToken === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE') {
+            return 'Ethereum';
+          } else if (srcToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48') {
+            return 'USD Coin';
+          }
+          return 'Token';
+        })(),
+        decimals: srcToken === '0x0000000000000000000000000000000000000000' ? 7 : 18,
         address: srcToken,
       },
       toToken: {
-        symbol: dstToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' ? 'USDC' : 'TOKEN',
-        name: dstToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' ? 'USD Coin' : 'Token',
+        symbol: (() => {
+          if (dstToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48') {
+            return 'USDC';
+          } else if (dstToken === 'USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN') {
+            return 'USDC';
+          }
+          return 'TOKEN';
+        })(),
+        name: dstToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' || 
+              dstToken === 'USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN' ? 'USD Coin' : 'Token',
         decimals: 6,
         address: dstToken,
       },
@@ -413,12 +449,26 @@ app.get('/api/mock/quote', (req: Request, res: Response) => {
         // Mock rates for different token pairs
         const amount = parseFloat(amountStr);
         
-        // Determine source token decimals
+        // Determine source token
         const isSourceETH = srcToken === '0x0000000000000000000000000000000000000000' || 
                            srcToken === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
-        const isDestUSDC = dstToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+        const isSourceXLM = srcToken === '0x0000000000000000000000000000000000000000'; // XLM uses zero address
+        const isDestUSDC = dstToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' ||
+                          dstToken === 'USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
         
-        if (isSourceETH && isDestUSDC) {
+        // Check if this is a cross-chain swap based on token addresses
+        const isStellarToken = (token: string) => token.includes(':') || token.length > 42;
+        const isEthereumToken = (token: string) => token.startsWith('0x') && token.length === 42;
+        
+        if (isSourceXLM && isDestUSDC && isStellarToken(dstToken as string)) {
+          // XLM to Stellar USDC: 1 XLM ≈ 0.45 USDC (realistic rate as of 2025)
+          // XLM has 7 decimals, USDC has 6 decimals
+          return Math.floor(amount * 0.45 / 1e7 * 1e6).toString();
+        } else if (srcToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' && dstToken === '0x0000000000000000000000000000000000000000') {
+          // USDC to XLM: 1 USDC ≈ 2.22 XLM (realistic rate as of 2025)
+          // USDC has 6 decimals, XLM has 7 decimals
+          return Math.floor(amount * 2.22 / 1e6 * 1e7).toString();
+        } else if (isSourceETH && isDestUSDC) {
           // ETH to USDC: 1 ETH = 3000 USDC
           return Math.floor(amount * 3000 / 1e18 * 1e6).toString();
         } else if (!isSourceETH && isDestUSDC) {
@@ -449,12 +499,48 @@ app.get('/api/mock/quote', (req: Request, res: Response) => {
 // Apply rate limiting to all routes
 app.use(generalLimiter);
 
-// Mount proxy routes with validation and specific rate limits
-app.use('/api/1inch/quote', quoteLimiter, validateQuote, oneinchApiProxy);
+// Custom handler for quotes that checks for Stellar tokens
+app.use('/api/1inch/quote', quoteLimiter, (req: Request, res: Response, next: NextFunction) => {
+  const { src, dst } = req.query;
+  
+  // Check if this involves Stellar tokens
+  const isStellarToken = (token: string | undefined) => 
+    token === '0x0000000000000000000000000000000000000000' || // XLM uses zero address
+    (token && (token.includes(':') || token.length > 42)); // Stellar format
+  
+  if (isStellarToken(src as string) || isStellarToken(dst as string)) {
+    console.log('[1inch Quote] Stellar token detected, using mock data for XLM/USDC conversion');
+    console.log(`  Source: ${src}, Destination: ${dst}`);
+    // Redirect to mock endpoint for Stellar quotes
+    req.url = '/api/mock/quote' + req.url.substring('/api/1inch/quote'.length);
+    return app.handle(req, res);
+  }
+  
+  // For non-Stellar, use real 1inch API
+  next();
+}, validateQuote, oneinchApiProxy);
+
+// Mount other proxy routes with validation and specific rate limits
 app.use('/api/1inch/swap', swapLimiter, validateSwap, oneinchApiProxy);
 app.use('/api/1inch', oneinchApiProxy);
 
-app.use('/api/fusion/quote', quoteLimiter, validateQuote, fusionApiProxy);
+app.use('/api/fusion/quote', quoteLimiter, (req: Request, res: Response, next: NextFunction) => {
+  const { src, dst } = req.query;
+  
+  // Check if this involves Stellar tokens
+  const isStellarToken = (token: string | undefined) => 
+    token === '0x0000000000000000000000000000000000000000' || // XLM uses zero address
+    (token && (token.includes(':') || token.length > 42)); // Stellar format
+  
+  if (isStellarToken(src as string) || isStellarToken(dst as string)) {
+    // Redirect to mock endpoint for Stellar quotes
+    req.url = '/api/mock/quote' + req.url.substring('/api/fusion/quote'.length);
+    return app.handle(req, res);
+  }
+  
+  next();
+}, validateQuote, fusionApiProxy);
+
 app.use('/api/fusion/swap', swapLimiter, validateSwap, fusionApiProxy);
 app.use('/api/fusion', fusionApiProxy);
 

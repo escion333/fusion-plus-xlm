@@ -22,11 +22,11 @@ export const config = {
         stellar: {
             chainId: STELLAR_CHAIN_ID,
             url: 'https://horizon.stellar.org',
-            testnet: true,
-            resolverContract: 'CBPL4TVZUM4TAHSRISO4CNNPWAIGMQLUN5MB4MDVZ5ZL3SRRTN56CVNG', // Our deployed HTLC
+            testnet: false,
+            resolverContract: 'CBX3ET3JMZQCQF74YN2PR35ALF3EI73VMYWUX33WKTQMY62I2YR2YWFU', // Mainnet HTLC
             tokens: {
                 USDC: {
-                    address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
+                    address: 'CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75',
                     issuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN'
                 },
                 XLM: {

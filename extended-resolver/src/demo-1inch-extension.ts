@@ -47,7 +47,6 @@ async function main() {
   await demoStellarToEthereum(coordinator);
 
   console.log('\n✅ Demo completed successfully!');
-  console.log('\n🏆 Key Achievement: First non-EVM blockchain integrated with 1inch Fusion+');
 }
 
 async function demoEthereumToBSC(coordinator: CrossChainCoordinator) {

@@ -30,7 +30,7 @@ export default function Home() {
 
         {/* Swap Interface */}
         <section className="container mx-auto px-4 py-8">
-          <div className="flex justify-center">
+          <div className="max-w-7xl mx-auto flex justify-center">
             <SwapCard />
           </div>
         </section>

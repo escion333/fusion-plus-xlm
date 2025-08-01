@@ -37,11 +37,11 @@ export function TokenSelector({ token, onTokenChange, chain }: TokenSelectorProp
 
   return (
     <Select value={token} onValueChange={onTokenChange}>
-      <SelectTrigger className="w-[140px]">
+      <SelectTrigger className="w-[110px] px-2 py-1.5 h-9">
         <SelectValue>
           <div className="flex items-center space-x-2">
             {tokens.find(t => t.symbol === token)?.icon}
-            <span>{token}</span>
+            <span className="text-sm font-medium">{token}</span>
           </div>
         </SelectValue>
       </SelectTrigger>

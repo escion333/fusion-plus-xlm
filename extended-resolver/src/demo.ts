@@ -1,6 +1,5 @@
 import { ExtendedRelayer, CrossChainOrder } from './ExtendedRelayer';
-import { STELLAR_CHAIN_ID } from './config';
-import Sdk from '@1inch/cross-chain-sdk';
+import { STELLAR_CHAIN_ID, ETHEREUM_CHAIN_ID } from './config';
 
 async function demoEthereumToStellarSwap() {
     console.log('=== Demo: Ethereum -> Stellar Cross-Chain Swap ===\n');
@@ -10,7 +9,7 @@ async function demoEthereumToStellarSwap() {
     
     // Create a mock order (in real implementation, this comes from 1inch order system)
     const order: CrossChainOrder = {
-        srcChainId: Sdk.NetworkEnum.ETHEREUM,
+        srcChainId: ETHEREUM_CHAIN_ID,
         dstChainId: STELLAR_CHAIN_ID,
         orderHash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
         maker: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', // User
@@ -41,7 +40,7 @@ async function demoStellarToEthereumSwap() {
     
     const order: CrossChainOrder = {
         srcChainId: STELLAR_CHAIN_ID,
-        dstChainId: Sdk.NetworkEnum.ETHEREUM,
+        dstChainId: ETHEREUM_CHAIN_ID,
         orderHash: '0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321',
         maker: 'GBFZR4HFQPZQHGKZYQSV3WHJRKJPXNCBNCNVWHJSZUQJEJDZVIHDTEST', // Stellar user
         taker: 'GCQTGZQQ5G4PTM2GL7CDIFKUBIPEC52BROAQIAPW53XBRJVN6ZJVTEX6V', // Stellar resolver

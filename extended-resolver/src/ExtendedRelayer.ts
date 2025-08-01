@@ -1,10 +1,12 @@
 import { STELLAR_CHAIN_ID } from './config';
 import { StellarMonitor } from './StellarMonitor';
+import { logger } from '../../src/services/resolver/utils/logger';
+import { EventEmitter } from 'events';
 
 // Mock of the 1inch MockRelayer - in real implementation, we'd import this
 class MockRelayer {
     async handleOrder(order: any) {
-        console.log('Base MockRelayer handling order', order);
+        logger.info('Base MockRelayer handling order', order);
         // Base implementation handles Ethereum <-> BSC
     }
 }
@@ -24,6 +26,7 @@ export interface CrossChainOrder {
 
 export class ExtendedRelayer extends MockRelayer {
     private stellarMonitor: StellarMonitor;
+    private emitter = new EventEmitter();
 
     constructor() {
         super();
@@ -46,27 +49,40 @@ export class ExtendedRelayer extends MockRelayer {
     }
 
     private async handleStellarDestination(order: CrossChainOrder) {
-        console.log('Handling Ethereum -> Stellar swap', order.orderHash);
+        logger.info('Handling Ethereum -> Stellar swap', { orderHash: order.orderHash });
         
         // 1. Wait for Ethereum escrow to be created
         // In real implementation, this would monitor Ethereum events
-        console.log('Waiting for Ethereum escrow...');
+        logger.info('Waiting for Ethereum escrow...');
+        
+        // Simulate Ethereum escrow creation delay
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
         // 2. Deploy Stellar escrow
         const stellarEscrow = await this.stellarMonitor.deployEscrow({
             orderHash: order.orderHash,
             hashlock: order.hashLock,
-            maker: order.maker,
-            taker: order.taker,
+            maker: order.taker, // Swapped for destination
+            taker: order.maker, // Swapped for destination
             token: this.mapTokenToStellar(order.takerAsset),
             amount: order.takingAmount,
+            safetyDeposit: BigInt('10000000'), // 1 XLM safety deposit
         });
         
-        console.log('Stellar escrow deployed:', stellarEscrow);
+        logger.info('Stellar escrow deployed', { escrowAddress: stellarEscrow });
         
         // 3. Fund Stellar escrow
         await this.stellarMonitor.fundEscrow(stellarEscrow, order.takingAmount);
         
+        // After deploying and funding escrows
+        this.emitter.emit('escrowsConfirmed', {
+          orderHash: order.orderHash,
+          srcEscrow: '0x...', // EVM escrow
+          dstEscrow: stellarEscrow,
+          status: 'readyForReveal'
+        });
+        console.log('Emitted escrowsConfirmed event');
+
         // 4. Wait for secret reveal and complete
         await this.stellarMonitor.waitForSecretReveal(order.orderHash);
     }

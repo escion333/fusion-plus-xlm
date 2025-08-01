@@ -1,34 +1,6 @@
-# 1inch Fusion+ Integration for Stellar 🏆
+# Fusion+ Extension
 
-**First non-EVM blockchain integrated with 1inch Fusion+ Protocol**
-
-A production-ready cross-chain swap implementation that bridges 1inch's Fusion+ protocol with the Stellar network, enabling seamless token swaps between Ethereum-based assets and Stellar assets.
-
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Ethereum](https://img.shields.io/badge/Ethereum-mainnet-green.svg)
-![Stellar](https://img.shields.io/badge/Stellar-mainnet-orange.svg)
-![Status](https://img.shields.io/badge/status-live%20on%20mainnet-brightgreen.svg)
-
-## 🎯 Mainnet Deployment
-
-✅ **Live on Stellar Mainnet**
-- Contract ID: `CBX3ET3JMZQCQF74YN2PR35ALF3EI73VMYWUX33WKTQMY62I2YR2YWFU`
-- [View on Explorer](https://stellar.expert/explorer/public/contract/CBX3ET3JMZQCQF74YN2PR35ALF3EI73VMYWUX33WKTQMY62I2YR2YWFU)
-- [Successful TX Proof](https://stellar.expert/explorer/public/tx/3b5b8935203e331b3dff64233485072ba3181266d5d66ebcf43fc3052fed006d)
-- Full HTLC flow tested with real assets
-
-## 🚀 Overview
-
-This project implements the first integration of 1inch Fusion+ protocol with the Stellar blockchain, enabling trustless cross-chain swaps. It provides a complete solution including smart contracts, a resolver service, and a user-friendly interface.
-
-## ✨ Features
-
-- **Cross-Chain Swaps**: Seamless token swaps between Ethereum and Stellar networks
-- **1inch Fusion+ Protocol**: Full integration with advanced order types and Dutch auctions
-- **Secure Escrow System**: Hash Time-Locked Contracts (HTLC) on both chains
-- **Automated Resolution**: Resolver service handles swap execution automatically
-- **Professional UI**: Modern interface with wallet integration for both networks
-- **Production Ready**: Comprehensive security measures and optimizations
+Cross-chain swap interface between Ethereum and Stellar networks using 1inch Fusion+ protocol.
 
 ## 🛠️ Tech Stack
 
@@ -84,9 +56,10 @@ This will show:
 
 3. **Set up environment variables**
    ```bash
-   cp .env.example .env
-   cp frontend/.env.local.example frontend/.env.local
-   # Edit the files with your configuration
+   # The .env file is pre-configured for demo mode
+   # To use with real mainnet, update the following in .env:
+   # - ETHEREUM_RPC_URL: Add your Infura/Alchemy API key
+   # - MOCK_MODE: Set to false for real transactions
    ```
 
 4. **Start the development environment**
@@ -118,8 +91,7 @@ fusion-plus-xlm/
 ├── stellar-fusion/       # Stellar contract implementation
 ├── scripts/              # Deployment and demo scripts
 │   └── 1inch/           # 1inch integration demos
-└── docs/                 # Documentation
-    └── ai-plans/         # Architecture specifications
+
 ```
 
 ⚠️ **Important**: The resolver architecture requires significant changes. See `docs/ai-plans/resolver-contract-specification.md` for the correct implementation.
@@ -199,11 +171,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [1inch Network](https://1inch.io/) for the Fusion+ protocol
 - [Stellar Development Foundation](https://stellar.org/) for the Stellar network
-- The DeFi community for continuous innovation
 
-## 📞 Support
+## Full Hackathon Context (New)
 
-For support, please open an issue in the GitHub repository or reach out to the maintainers.
+[Insert summary, including relayer/resolver details, no non-EVM LOP requirement, etc.]
 
 ---
 

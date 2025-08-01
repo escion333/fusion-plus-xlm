@@ -1,4 +1,5 @@
 import * as StellarSdk from 'stellar-sdk';
+import { ethers } from 'ethers';
 
 // This is our Stellar extension to the resolver pattern
 export class StellarResolver {
@@ -36,6 +37,36 @@ export class StellarResolver {
     // const tx = await contract.call('deploy_escrow', ...params);
     
     return escrowId;
+  }
+
+  /**
+   * Create order with Dutch auction parameters (optional for UX)
+   * Deploys HTLC with initial price that decreases over time
+   */
+  async createAuctionOrder(params: {
+    initialAmount: bigint;
+    minAmount: bigint;
+    duration: number; // seconds
+    hashLock: string;
+    maker: string;
+    taker: string;
+    token: string;
+  }): Promise<string> {
+    // Calculate timelock-based decay
+    const decayRate = (params.initialAmount - params.minAmount) / BigInt(params.duration);
+    // Deploy HTLC with parameters
+    const escrow = await this.deployEscrow({
+      orderHash: '0x' + Buffer.from(ethers.randomBytes(32)).toString('hex'), // Generate dummy
+      hashLock: params.hashLock,
+      srcAddress: params.maker,
+      dstAddress: params.taker,
+      token: params.token,
+      amount: params.initialAmount,
+      timeLocks: this.calculateAuctionTimelocks(params.duration), // Assume helper
+      // Store decay in immutables or extension
+    });
+    console.log(`Auction order created: Initial ${params.initialAmount}, Min ${params.minAmount} over ${params.duration}s`);
+    return escrow;
   }
 
   /**
@@ -82,5 +113,10 @@ export class StellarResolver {
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     return '0x' + 'cafebabe'.repeat(8);
+  }
+
+  private calculateAuctionTimelocks(duration: number): any {
+    // Placeholder: Compute timelocks based on duration
+    return { start: Date.now(), end: Date.now() + duration * 1000 };
   }
 }

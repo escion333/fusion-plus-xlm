@@ -6,8 +6,8 @@ import { ArrowDownIcon, Activity } from "lucide-react";
 import { ethers } from "ethers";
 import { TokenSelector } from "./TokenSelector";
 import { AmountInput } from "./AmountInput";
-import { ChainSelector } from "./ChainSelector";
 import { useState, useEffect } from "react";
+import { EthereumLogo, StellarLogo } from "@/components/icons/ChainLogos";
 import { useWallets } from "@/contexts/WalletContext";
 import { useSwap } from "@/hooks/useSwap";
 import { useBalances } from "@/hooks/useBalances";
@@ -123,6 +123,8 @@ export function SwapCard() {
     }
   }, [debouncedFromAmount, fromChain, toChain, fromToken, toToken, getQuote, isFullyConnected, isMockMode]);
 
+
+
   const switchChains = () => {
     setFromChain(toChain);
     setToChain(fromChain);
@@ -141,10 +143,10 @@ export function SwapCard() {
   };
 
   return (
-    <>
+    <div className="w-full flex gap-6 justify-center items-start">
       {/* Show progress when swap is active */}
       {swapState !== 'idle' && (
-        <div className="mb-4">
+        <div className="w-full max-w-md">
           <SwapProgress 
             status={swapState}
             orderHash={orderHash || undefined}
@@ -152,12 +154,13 @@ export function SwapCard() {
             error={error || undefined}
             orderDetails={orderDetails}
             onClose={handleCloseProgress}
+            isMockMode={isMockMode}
           />
         </div>
       )}
       
       {/* Main swap card */}
-      <Card className={`bg-neutral-900/80 backdrop-blur-sm border-0 w-full max-w-md mx-auto transition-opacity ${
+      <Card className={`bg-neutral-900/80 backdrop-blur-sm border-0 w-full max-w-md transition-opacity ${
         swapState !== 'idle' ? 'opacity-50 pointer-events-none' : ''
       }`}>
         <CardHeader className="pb-4">
@@ -179,81 +182,100 @@ export function SwapCard() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-        {/* From Section */}
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-neutral-300 uppercase tracking-wide">From</span>
-            <ChainSelector 
-              chain={fromChain} 
-              onChainChange={setFromChain}
-            />
-          </div>
-          <div className="flex space-x-2">
-            <AmountInput
-              value={fromAmount}
-              onChange={setFromAmount}
-              placeholder="0"
-            />
-            <TokenSelector
-              token={fromToken}
-              onTokenChange={setFromToken}
-              chain={fromChain}
-            />
-          </div>
-          {isFullyConnected && (
-            <div className="text-xs text-neutral-400">
-              Balance: {balancesLoading ? 'Loading...' : (
-                fromChain === 'ethereum' 
-                  ? (fromToken === 'ETH' ? `${parseFloat(ethBalance).toFixed(4)} ETH` : `${parseFloat(ethUSDCBalance).toFixed(2)} USDC`)
-                  : (fromToken === 'XLM' ? `${parseFloat(xlmBalance).toFixed(2)} XLM` : `${parseFloat(xlmUSDCBalance).toFixed(2)} USDC`)
-              )}
+        {/* Swap Container */}
+        <div className="space-y-4">
+          {/* From Section */}
+          <div className="bg-neutral-800/30 rounded-xl p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 space-y-2">
+                <span className="text-xs text-neutral-300 uppercase tracking-wide">From</span>
+                <AmountInput
+                  value={fromAmount}
+                  onChange={setFromAmount}
+                  placeholder="0"
+                />
+                {isFullyConnected && (
+                  <div className="text-xs text-neutral-400">
+                    Balance: {balancesLoading ? 'Loading...' : (
+                      fromChain === 'ethereum' 
+                        ? (fromToken === 'ETH' ? `${parseFloat(ethBalance).toFixed(4)} ETH` : `${parseFloat(ethUSDCBalance).toFixed(2)} USDC`)
+                        : (fromToken === 'XLM' ? `${parseFloat(xlmBalance).toFixed(2)} XLM` : `${parseFloat(xlmUSDCBalance).toFixed(2)} USDC`)
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-800/50 rounded-lg">
+                  {fromChain === 'ethereum' ? (
+                    <EthereumLogo className="w-5 h-5" />
+                  ) : (
+                    <StellarLogo className="w-5 h-5" />
+                  )}
+                  <span className="text-sm font-medium text-neutral-200">
+                    {fromChain === 'ethereum' ? 'Ethereum' : 'Stellar'}
+                  </span>
+                </div>
+                <TokenSelector
+                  token={fromToken}
+                  onTokenChange={setFromToken}
+                  chain={fromChain}
+                />
+              </div>
             </div>
-          )}
-        </div>
-
-        {/* Switch Button */}
-        <div className="flex justify-center -my-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full bg-neutral-800 hover:bg-neutral-700 w-8 h-8"
-            onClick={switchChains}
-          >
-            <ArrowDownIcon className="h-4 w-4 text-neutral-400" />
-          </Button>
-        </div>
-
-        {/* To Section */}
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-neutral-300 uppercase tracking-wide">To</span>
-            <ChainSelector 
-              chain={toChain} 
-              onChainChange={setToChain}
-            />
           </div>
-          <div className="flex space-x-2">
-            <AmountInput
-              value={toAmount}
-              onChange={setToAmount}
-              placeholder="0"
-              disabled
-            />
-            <TokenSelector
-              token={toToken}
-              onTokenChange={setToToken}
-              chain={toChain}
-            />
+
+          {/* Switch Button */}
+          <div className="flex justify-center -my-2 relative z-10">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full bg-neutral-800 hover:bg-neutral-700 border-2 border-neutral-700 w-10 h-10"
+              onClick={switchChains}
+            >
+              <ArrowDownIcon className="h-5 w-5 text-neutral-400" />
+            </Button>
           </div>
-          {isFullyConnected && (
-            <div className="text-xs text-neutral-400">
-              Balance: {balancesLoading ? 'Loading...' : (
-                toChain === 'ethereum' 
-                  ? (toToken === 'ETH' ? `${parseFloat(ethBalance).toFixed(4)} ETH` : `${parseFloat(ethUSDCBalance).toFixed(2)} USDC`)
-                  : (toToken === 'XLM' ? `${parseFloat(xlmBalance).toFixed(2)} XLM` : `${parseFloat(xlmUSDCBalance).toFixed(2)} USDC`)
-              )}
+
+          {/* To Section */}
+          <div className="bg-neutral-800/30 rounded-xl p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 space-y-2">
+                <span className="text-xs text-neutral-300 uppercase tracking-wide">To</span>
+                <AmountInput
+                  value={toAmount}
+                  onChange={setToAmount}
+                  placeholder="0"
+                  disabled
+                />
+                {isFullyConnected && (
+                  <div className="text-xs text-neutral-400">
+                    Balance: {balancesLoading ? 'Loading...' : (
+                      toChain === 'ethereum' 
+                        ? (toToken === 'ETH' ? `${parseFloat(ethBalance).toFixed(4)} ETH` : `${parseFloat(ethUSDCBalance).toFixed(2)} USDC`)
+                        : (toToken === 'XLM' ? `${parseFloat(xlmBalance).toFixed(2)} XLM` : `${parseFloat(xlmUSDCBalance).toFixed(2)} USDC`)
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-800/50 rounded-lg">
+                  {toChain === 'ethereum' ? (
+                    <EthereumLogo className="w-5 h-5" />
+                  ) : (
+                    <StellarLogo className="w-5 h-5" />
+                  )}
+                  <span className="text-sm font-medium text-neutral-200">
+                    {toChain === 'ethereum' ? 'Ethereum' : 'Stellar'}
+                  </span>
+                </div>
+                <TokenSelector
+                  token={toToken}
+                  onTokenChange={setToToken}
+                  chain={toChain}
+                />
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Swap Details */}
@@ -329,8 +351,9 @@ export function SwapCard() {
         >
           {isLoading ? "Processing..." : !isFullyConnected ? "Connect Wallets" : "Swap"}
         </button>
+
       </CardContent>
     </Card>
-    </>
+    </div>
   );
 }

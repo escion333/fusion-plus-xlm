@@ -28,11 +28,11 @@ interface ChainSelectorProps {
 export function ChainSelector({ chain, onChainChange }: ChainSelectorProps) {
   return (
     <Select value={chain} onValueChange={onChainChange}>
-      <SelectTrigger className="w-[140px]">
+      <SelectTrigger className="w-[110px] px-2 py-1.5 h-9">
         <SelectValue>
           <div className="flex items-center space-x-2">
             {CHAINS.find(c => c.id === chain)?.icon}
-            <span>{CHAINS.find(c => c.id === chain)?.name}</span>
+            <span className="text-sm">{CHAINS.find(c => c.id === chain)?.name}</span>
           </div>
         </SelectValue>
       </SelectTrigger>

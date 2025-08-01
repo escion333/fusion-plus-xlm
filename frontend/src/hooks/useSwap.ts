@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { ethers } from 'ethers';
+import * as StellarSdk from 'stellar-sdk';
 import { FusionAPI, getTokenAddress } from '@/services/api';
 import { useWallets } from '@/contexts/WalletContext';
 

@@ -173,8 +173,6 @@ async function main() {
   console.log('✅ Integration with 1inch Fusion+ architecture');
   console.log('✅ Cross-chain HTLC swap flow');
   console.log('✅ Real transaction proof\n');
-  
-  console.log('🏆 First non-EVM blockchain integrated with 1inch Fusion+!\n');
 }
 
 // Run if called directly

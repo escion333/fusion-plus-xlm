@@ -26,7 +26,6 @@ out/
 .env.testnet
 
 # Logs
-logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -73,34 +72,10 @@ scripts/test-*.js
 scripts/setup-*.sh
 scripts/deploy-*.sh
 
-# Log files from dev
-frontend.log
-proxy.log
 
 # Verification files
 verification-checklist.md
 
-# AI/Workflow artifacts
-*_SUMMARY.md
-*_GUIDE.md
-*_CHECKLIST.md
-*_REVIEW.md
-*_PROOF.md
-*_OPERATION_*.md
-*_TWEAKS_*.md
-*_UX_*.md
-*_FIX.md
-*_RESULTS.md
-CLI_*.md
-COMPLETE_*.md
-FINAL_*.md
-FRONTEND_*.md
-HACKATHON_*.md
-MAINNET_*.md
-MOCK_*.md
-PROJECT_*.md
-SWAP_*.md
-USDC_*.md
 
 # Build artifacts
 artifacts/
@@ -123,6 +98,8 @@ contract-id.txt
 # Stellar specific
 **/test_snapshots/
 Cargo.lock
+stellar-fusion/TEST_RESULTS.md
+stellar-fusion/test_snapshots/
 
 # TypeScript build info
 tsconfig.tsbuildinfo
@@ -142,3 +119,32 @@ scripts/test-*.sh
 scripts/test-*.js
 scripts/withdraw-*.sh
 scripts/wrap-*.sh
+scripts/stellar-htlc-mainnet.js
+scripts/stellar-htlc-mainnet.js.map
+scripts/stellar-htlc-mainnet.d.ts
+scripts/stellar-htlc-mainnet.d.ts.map
+
+# Extended resolver generated files
+extended-resolver/src/*.js
+extended-resolver/src/*.js.map
+extended-resolver/src/*.d.ts
+extended-resolver/src/*.d.ts.map
+extended-resolver/package-full.json
+extended-resolver/INTEGRATION_SUMMARY.md
+
+# Reference files (examples from 1inch)
+reference/
+
+# Archive files
+archive/
+
+# Package lock files (keep only one)
+pnpm-lock.yaml
+yarn.lock
+
+# Frontend specific
+frontend/tsconfig.tsbuildinfo
+frontend/.next/
+
+# Stellar contract FEATURE_SUMMARY
+stellar-fusion/FEATURE_SUMMARY.md

@@ -99,6 +99,10 @@ export class SwapOrchestrator extends EventEmitter {
     
     // Deploy counterpart escrow on destination chain
     await this.deployCounterpartEscrow(swap, destinationChain);
+    } catch (error) {
+      logger.error('Error handling source escrow deployment', { error, orderHash: event.orderHash });
+      throw error;
+    }
   }
 
   /**
