@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
+// import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -56,11 +56,14 @@ export const WalletSelector: React.FC<WalletSelectorProps> = ({
     try {
       await onSelectWallet(walletId);
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       // Handle specific error cases
-      if (err?.code === 'ACTION_REJECTED' || err?.message?.includes('user rejected') || err?.message?.includes('User rejected')) {
+      const error = err as Error & { code?: string };
+      const errorMessage = error?.message || '';
+      
+      if (error?.code === 'ACTION_REJECTED' || errorMessage.includes('user rejected') || errorMessage.includes('User rejected')) {
         setError('Connection cancelled by user');
-      } else if (err?.message?.includes('already pending')) {
+      } else if (errorMessage.includes('already pending')) {
         setError('A connection request is already pending. Please check your wallet.');
       } else {
         setError(err instanceof Error ? err.message : 'Failed to connect wallet');

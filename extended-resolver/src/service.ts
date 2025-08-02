@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
+import { ethers } from 'ethers';
 import { CrossChainCoordinator } from './CrossChainCoordinator';
+import { MainnetHTLCHandler } from '../../src/services/extended-resolver/mainnet-htlc-handler';
 import { STELLAR_CHAIN_ID } from './config';
 
 const app = express();
@@ -26,6 +28,9 @@ const coordinator = new CrossChainCoordinator({
   }
 });
 
+// Initialize mainnet HTLC handler
+const mainnetHandler = new MainnetHTLCHandler();
+
 // Order tracking
 const orders = new Map<string, any>();
 
@@ -34,8 +39,8 @@ app.post('/api/orders/create', async (req, res) => {
   try {
     const { order, signature, srcChainId, dstChainId } = req.body;
     
-    // Generate order ID
-    const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Generate order ID as a proper hex string
+    const orderId = ethers.id(`order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
     
     // Store order
     orders.set(orderId, {
@@ -80,6 +85,27 @@ app.get('/api/orders/:orderId/status', (req, res) => {
   });
 });
 
+// Also support /api/orders/:orderId without /status
+app.get('/api/orders/:orderId', (req, res) => {
+  const { orderId } = req.params;
+  const order = orders.get(orderId);
+  
+  if (!order) {
+    // Also check if it's stored in mainnet handler
+    const mainnetOrder = mainnetHandler.getOrderStatus(orderId);
+    if (mainnetOrder) {
+      return res.json(mainnetOrder);
+    }
+    
+    return res.status(404).json({
+      success: false,
+      error: 'Order not found'
+    });
+  }
+  
+  res.json(order);
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({
@@ -102,20 +128,45 @@ async function processOrder(
     // Update status
     updateOrderStatus(orderId, 'processing');
     
-    // Execute cross-chain swap
-    const result = await coordinator.handleCrossChainOrder({
-      order,
-      signature,
-      srcChainId,
-      dstChainId
-    });
-    
-    // Update with results
-    updateOrderStatus(orderId, 'completed', {
-      srcEscrow: result.srcEscrow,
-      dstEscrow: result.dstEscrow,
-      completedAt: new Date().toISOString()
-    });
+    // Check if this is a Stellar cross-chain order
+    if (dstChainId === STELLAR_CHAIN_ID || order.crossChain?.destinationChain === 'stellar') {
+      // Use mainnet HTLC handler for Stellar orders
+      const result = await mainnetHandler.handleCrossChainOrder({
+        orderId,
+        srcChain: srcChainId === 8453 ? 'base' : 'ethereum',
+        dstChain: 'stellar',
+        maker: order.maker,
+        taker: order.taker || process.env.DEMO_STELLAR_RESOLVER!,
+        amount: order.makingAmount || order.amount,
+        token: 'USDC', // Determine from order.makerAsset
+        stellarReceiver: order.crossChain?.stellarReceiver || process.env.DEMO_STELLAR_USER!,
+      });
+      
+      if (result.success) {
+        updateOrderStatus(orderId, 'escrow_created', {
+          ...result,
+          escrowAddresses: result.escrowAddresses,
+          completedAt: new Date().toISOString()
+        });
+      } else {
+        throw new Error(result.error);
+      }
+    } else {
+      // Execute standard cross-chain swap
+      const result = await coordinator.handleCrossChainOrder({
+        order,
+        signature,
+        srcChainId,
+        dstChainId
+      });
+      
+      // Update with results
+      updateOrderStatus(orderId, 'completed', {
+        srcEscrow: result.srcEscrow,
+        dstEscrow: result.dstEscrow,
+        completedAt: new Date().toISOString()
+      });
+    }
   } catch (error) {
     console.error('Error processing order:', error);
     updateOrderStatus(orderId, 'failed', {

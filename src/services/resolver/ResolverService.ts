@@ -105,19 +105,19 @@ export class ResolverService extends EventEmitter {
           
           monitor.on('escrowEvent', (event: EscrowEvent) => {
             this.handleEscrowEvent(chainId, event).catch(error => {
-              logger.error(`Failed to handle escrow event on ${chainId}:`, error);
+              logger.error(`Failed to handle escrow event on ${chainId}:`, error instanceof Error ? error.message : String(error));
             });
           });
           
           monitor.on('error', (error: Error) => {
-            logger.error(`Monitor error on ${chainId}:`, error);
+            logger.error(`Monitor error on ${chainId}:`, error instanceof Error ? error.message : String(error));
           });
           
           await monitor.start();
           logger.info(`✅ Started monitoring ${chainId}`);
         } catch (error) {
-          logger.error(`Failed to start monitor for ${chainId}:`, error);
-          throw new Error(`Chain monitor startup failed for ${chainId}: ${error.message}`);
+          logger.error(`Failed to start monitor for ${chainId}:`, error instanceof Error ? error.message : String(error));
+          throw new Error(`Chain monitor startup failed for ${chainId}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
 
@@ -127,7 +127,7 @@ export class ResolverService extends EventEmitter {
         try {
           await this.handleTimelockExpiration(data);
         } catch (error) {
-          logger.error('Failed to handle timelock expiration:', error);
+          logger.error('Failed to handle timelock expiration:', error instanceof Error ? error.message : String(error));
         }
       });
       await this.timelockManager.start();
@@ -145,7 +145,7 @@ export class ResolverService extends EventEmitter {
       logger.info('Initial status:', status);
       
     } catch (error) {
-      logger.error('Failed to start resolver service:', error);
+      logger.error('Failed to start resolver service:', error instanceof Error ? error.message : String(error));
       this.isRunning = false;
       
       // Cleanup on failure
@@ -197,7 +197,7 @@ export class ResolverService extends EventEmitter {
           break;
       }
     } catch (error) {
-      logger.error(`Error handling escrow event: ${error}`, { event });
+      logger.error(`Error handling escrow event: ${error instanceof Error ? error.message : String(error)}`, { event });
     }
   }
 

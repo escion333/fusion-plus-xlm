@@ -26,6 +26,8 @@ export interface SwapOrder {
 }
 
 export enum SwapStatus {
+  PENDING = 'PENDING',
+  ACTIVE = 'ACTIVE',
   CREATED = 'CREATED',
   SOURCE_FUNDED = 'SOURCE_FUNDED',
   DESTINATION_DEPLOYED = 'DESTINATION_DEPLOYED',

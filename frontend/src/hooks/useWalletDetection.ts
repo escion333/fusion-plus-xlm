@@ -13,21 +13,23 @@ export const useWalletDetection = () => {
         console.log('window.ethereum exists:', {
           isMetaMask: window.ethereum.isMetaMask,
           isRabby: window.ethereum.isRabby,
-          isBraveWallet: (window.ethereum as any).isBraveWallet,
-          isExodus: (window.ethereum as any).isExodus,
-          _metamask: !!(window.ethereum as any)._metamask,
+          isBraveWallet: (window.ethereum as Window['ethereum'] & { isBraveWallet?: boolean })?.isBraveWallet,
+          isExodus: (window.ethereum as Window['ethereum'] & { isExodus?: boolean })?.isExodus,
+          _metamask: !!(window.ethereum as Window['ethereum'] & { _metamask?: unknown })?._metamask,
         });
 
         // Check for providers array (multiple wallets)
-        if ((window.ethereum as any).providers) {
-          console.log('Multiple providers detected:', (window.ethereum as any).providers.length);
-          (window.ethereum as any).providers.forEach((provider: any, index: number) => {
+        const ethWithProviders = window.ethereum as Window['ethereum'] & { providers?: unknown[] };
+        if (ethWithProviders.providers) {
+          console.log('Multiple providers detected:', ethWithProviders.providers.length);
+          ethWithProviders.providers.forEach((provider: unknown, index: number) => {
+            const p = provider as { isMetaMask?: boolean; isRabby?: boolean; _metamask?: unknown; selectedAddress?: string; chainId?: string };
             console.log(`Provider ${index}:`, {
-              isMetaMask: provider.isMetaMask,
-              isRabby: provider.isRabby,
-              _metamask: !!provider._metamask,
-              selectedAddress: provider.selectedAddress,
-              chainId: provider.chainId,
+              isMetaMask: p.isMetaMask,
+              isRabby: p.isRabby,
+              _metamask: !!p._metamask,
+              selectedAddress: p.selectedAddress,
+              chainId: p.chainId,
             });
           });
         }
@@ -37,9 +39,9 @@ export const useWalletDetection = () => {
 
       // Check for other wallet objects
       const wallets = {
-        metamask: (window as any).metamask,
-        rabby: (window as any).rabby,
-        ethereum: (window as any).ethereum,
+        metamask: (window as Window & { metamask?: unknown }).metamask,
+        rabby: (window as Window & { rabby?: unknown }).rabby,
+        ethereum: window.ethereum,
       };
 
       console.log('Other wallet objects:', wallets);

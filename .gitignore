@@ -148,3 +148,74 @@ frontend/.next/
 
 # Stellar contract FEATURE_SUMMARY
 stellar-fusion/FEATURE_SUMMARY.md
+
+# Additional cleanup patterns
+*.md.backup
+*.tmp.md
+*-test.json
+*-demo.json
+smoke-test-*.json
+swap-*.json
+real-*.json
+no-deposit-*.json
+persisted-*.json
+dry-run-*.json
+final-*.json
+
+# Extended resolver compiled files
+extended-resolver/**/*.js
+extended-resolver/**/*.js.map
+extended-resolver/**/*.d.ts
+extended-resolver/**/*.d.ts.map
+!extended-resolver/src/index.ts
+
+# Internal documentation (moved to docs/)
+CLAUDE.md
+*_CHECKLIST.md
+*_COMPLETE.md
+*_STATUS.md
+*_REPORT.md
+*_GUIDE.md
+*_IMPLEMENTATION.md
+*_DEMO.md
+*_PERSISTENCE.md
+*_DEPLOYMENT.md
+*_VERIFICATION.md
+*_ANALYSIS.md
+*_SUMMARY.md
+*_PLAN.md
+*_ISSUE.md
+*_RESULTS.md
+
+# Development scripts
+scripts/*-test*.ts
+scripts/*-debug*.ts
+scripts/*-check*.ts
+scripts/*-verify*.ts
+scripts/*-demo*.ts
+scripts/*-real*.ts
+scripts/*-simple*.ts
+scripts/*-quick*.ts
+scripts/*-monitor*.ts
+scripts/*-recover*.ts
+scripts/*-find*.ts
+scripts/create-*.ts
+scripts/execute-*.ts
+scripts/withdraw*.ts
+scripts/fund*.ts
+scripts/deposit*.ts
+scripts/resolver-*.ts
+scripts/user-*.ts
+
+# Compiled TypeScript in scripts
+scripts/**/*.js
+scripts/**/*.js.map
+scripts/**/*.d.ts
+scripts/**/*.d.ts.map
+
+# Environment protection script
+protect-env.sh
+
+# Base deployment files (if regenerated)
+base-escrow-factory-deployment.json
+base-resolver-deployment.json

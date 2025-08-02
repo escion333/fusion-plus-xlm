@@ -16,14 +16,14 @@ app.use(express.json());
 
 // Build configuration
 const config: ResolverConfig = {
-  chains: (process.env.RESOLVER_CHAINS || 'ethereum,stellar').split(',') as any,
+  chains: (process.env.RESOLVER_CHAINS || 'base,stellar').split(',') as any,
   polling: {
     interval: parseInt(process.env.RESOLVER_POLLING_INTERVAL || '5000', 10),
     enabled: process.env.RESOLVER_POLLING_ENABLED !== 'false',
   },
   resolver: {
     address: process.env.RESOLVER_ADDRESS || '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
-    privateKey: process.env.RESOLVER_PRIVATE_KEY || 'demo_key',
+    privateKey: process.env.RESOLVER_PRIVATE_KEY || process.env.BASE_PRIVATE_KEY || 'demo_key',
   },
   database: {
     connectionString: process.env.DATABASE_URL || 'inmemory',
@@ -82,20 +82,8 @@ app.post('/api/orders', async (req, res) => {
     // Store order
     orders.set(orderId, order);
     
-    // In production, this would trigger the resolver to monitor for the order
-    // For demo, we'll simulate the flow
-    if (process.env.MOCK_MODE === 'true') {
-      setTimeout(() => {
-        order.status = 'processing';
-        order.srcEscrow = '0x' + Math.random().toString(16).substr(2, 40);
-        order.dstEscrow = process.env.STELLAR_CONTRACT_ID;
-      }, 2000);
-      
-      setTimeout(() => {
-        order.status = 'completed';
-        order.completedAt = new Date().toISOString();
-      }, 5000);
-    }
+    // Trigger the resolver to monitor for the order
+    // In a real implementation, this would initiate the cross-chain swap process
     
     res.json({
       success: true,

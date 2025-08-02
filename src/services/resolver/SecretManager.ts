@@ -1,4 +1,5 @@
 import { randomBytes, createHash } from 'crypto';
+import { ethers } from 'ethers';
 import { logger } from './utils/logger';
 
 export interface SecretData {
@@ -11,17 +12,33 @@ export interface SecretData {
 
 export class SecretManager {
   private secrets: Map<string, SecretData> = new Map();
+  private persistentStore: Map<string, string> = new Map(); // In production, replace with Redis/DB
+
+  /**
+   * Generate a new secret with persistent storage
+   */
+  async newSecret(): Promise<{ secret: string; hash: string }> {
+    const bytes = ethers.randomBytes(32);
+    const secret = ethers.hexlify(bytes);
+    const hash = ethers.keccak256(secret);
+    
+    console.log('🔑 NEW SECRET', secret); // Console breadcrumb for debugging
+    
+    // Store secret with hash as key for retrieval
+    await this.persistentStore.set(`secret:${hash}`, secret);
+    
+    return { secret, hash };
+  }
 
   /**
    * Generate a cryptographically secure secret for an order
    */
-  generateSecret(orderHash: string): SecretData {
-    const secret = '0x' + randomBytes(32).toString('hex');
-    const hashedSecret = this.hashSecret(secret);
+  async generateSecret(orderHash: string): Promise<SecretData> {
+    const { secret, hash } = await this.newSecret();
     
     const secretData: SecretData = {
       secret,
-      hashedSecret,
+      hashedSecret: hash,
       orderHash,
       createdAt: new Date(),
     };
@@ -70,8 +87,23 @@ export class SecretManager {
   /**
    * Get stored secret for an order
    */
-  getSecret(orderHash: string): SecretData | undefined {
-    return this.secrets.get(orderHash);
+  async getSecret(orderHash: string): Promise<SecretData | undefined> {
+    const secretData = this.secrets.get(orderHash);
+    
+    // If not in memory, try to recover from persistent store
+    if (!secretData) {
+      // This would need the hash to look up, typically stored with the order
+      return undefined;
+    }
+    
+    return secretData;
+  }
+
+  /**
+   * Get secret by hash from persistent store
+   */
+  async getSecretByHash(hash: string): Promise<string | undefined> {
+    return this.persistentStore.get(`secret:${hash}`);
   }
 
   /**
@@ -131,7 +163,7 @@ export class SecretManager {
   /**
    * Build Merkle tree for partial fill secrets
    */
-  buildMerkleTree(secrets: string[]): { root: string; proofs: Map<number, string[]> } {
+  buildMerkleTreeForSecrets(secrets: string[]): { root: string; proofs: Map<number, string[]> } {
     // Simple Merkle tree implementation
     // In production, use a proper Merkle tree library
     
@@ -144,12 +176,72 @@ export class SecretManager {
     });
     
     // Build tree and generate proofs
-    // TODO: Implement proper Merkle tree logic
+    const tree = this.buildMerkleTreeFromLeaves(leaves);
+    const proofs = new Map<number, string[]>();
+    
+    // Generate proof for each leaf
+    for (let i = 0; i < leaves.length; i++) {
+      proofs.set(i, this.getMerkleProof(tree, i));
+    }
     
     return {
-      root: '0x' + createHash('keccak256').update(Buffer.concat(leaves)).digest('hex'),
-      proofs: new Map(),
+      root: '0x' + tree[tree.length - 1].toString('hex'),
+      proofs,
     };
+  }
+
+  /**
+   * Build Merkle tree from leaves
+   */
+  private buildMerkleTreeFromLeaves(leaves: Buffer[]): Buffer[] {
+    if (leaves.length === 0) {
+      return [Buffer.alloc(32)];
+    }
+    
+    const tree: Buffer[] = [...leaves];
+    let levelSize = leaves.length;
+    
+    while (levelSize > 1) {
+      const nextLevelSize = Math.ceil(levelSize / 2);
+      
+      for (let i = 0; i < nextLevelSize; i++) {
+        const left = tree[tree.length - levelSize + i * 2];
+        const right = i * 2 + 1 < levelSize 
+          ? tree[tree.length - levelSize + i * 2 + 1]
+          : left; // Duplicate last node if odd number
+        
+        const combined = Buffer.concat([left, right]);
+        tree.push(createHash('keccak256').update(combined).digest());
+      }
+      
+      levelSize = nextLevelSize;
+    }
+    
+    return tree;
+  }
+  
+  /**
+   * Get Merkle proof for a leaf
+   */
+  private getMerkleProof(tree: Buffer[], leafIndex: number): string[] {
+    const proof: string[] = [];
+    let index = leafIndex;
+    let levelStart = 0;
+    let levelSize = Math.ceil(tree.length / 2);
+    
+    while (levelSize > 1) {
+      const siblingIndex = index % 2 === 0 ? index + 1 : index - 1;
+      
+      if (siblingIndex < levelSize) {
+        proof.push('0x' + tree[levelStart + siblingIndex].toString('hex'));
+      }
+      
+      index = Math.floor(index / 2);
+      levelStart += levelSize;
+      levelSize = Math.ceil(levelSize / 2);
+    }
+    
+    return proof;
   }
 
   /**

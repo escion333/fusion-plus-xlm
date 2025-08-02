@@ -25,7 +25,7 @@ export const useMetaMask = (config?: WalletConfig) => {
   const connect = useCallback(async (walletId?: string) => {
     try {
       const selectedWallet = walletId || config?.walletId || 'auto';
-      let ethereum: any;
+      let ethereum: typeof window.ethereum;
 
 
       // Handle different wallet providers
@@ -54,7 +54,7 @@ export const useMetaMask = (config?: WalletConfig) => {
         }
       }
 
-      const provider = new ethers.BrowserProvider(ethereum);
+      const provider = new ethers.BrowserProvider(ethereum as ethers.Eip1193Provider);
       const accounts = await provider.send("eth_requestAccounts", []);
       
       if (accounts.length === 0) {
@@ -73,18 +73,23 @@ export const useMetaMask = (config?: WalletConfig) => {
       });
 
       // Listen for account changes
-      ethereum.on('accountsChanged', (accounts: string[]) => {
-        if (accounts.length === 0) {
+      if (ethereum && ethereum.on) {
+        ethereum.on('accountsChanged', (accounts: unknown) => {
+          const accountList = accounts as string[];
+        if (accountList.length === 0) {
           disconnect();
         } else {
-          setState(prev => ({ ...prev, address: accounts[0] }));
+          setState(prev => ({ ...prev, address: accountList[0] }));
         }
       });
+      }
 
       // Listen for chain changes
-      ethereum.on('chainChanged', (chainId: string) => {
-        window.location.reload();
-      });
+      if (ethereum && ethereum.on) {
+        ethereum.on('chainChanged', (chainId: unknown) => {
+        setState(prev => ({ ...prev, chainId: parseInt(chainId as string, 16) }));
+        });
+      }
 
       return { provider, signer, address: accounts[0] };
     } catch (error) {
@@ -107,16 +112,18 @@ export const useMetaMask = (config?: WalletConfig) => {
     if (!window.ethereum) {
       throw new Error('MetaMask is not installed');
     }
+    
+    const ethereum = window.ethereum as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> };
 
     try {
-      await window.ethereum.request({
+      await ethereum.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: '0xaa36a7' }], // Sepolia chainId
       });
-    } catch (error: any) {
+    } catch (error) {
       // This error code indicates that the chain has not been added to MetaMask
-      if (error.code === 4902) {
-        await window.ethereum.request({
+      if ((error as { code?: number }).code === 4902) {
+        await ethereum.request({
           method: 'wallet_addEthereumChain',
           params: [{
             chainId: '0xaa36a7',
@@ -140,14 +147,51 @@ export const useMetaMask = (config?: WalletConfig) => {
     if (!window.ethereum) {
       throw new Error('Wallet is not installed');
     }
+    
+    const ethereum = window.ethereum as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> };
 
     try {
-      await window.ethereum.request({
+      await ethereum.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: '0x1' }], // Mainnet chainId
       });
-    } catch (error: any) {
+    } catch (error) {
       throw error;
+    }
+  }, []);
+
+  const switchToBase = useCallback(async () => {
+    if (!window.ethereum) {
+      throw new Error('Wallet is not installed');
+    }
+    
+    const ethereum = window.ethereum as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> };
+
+    try {
+      await ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x2105' }], // Base mainnet chainId (8453 in hex)
+      });
+    } catch (error) {
+      // This error code indicates that the chain has not been added to MetaMask
+      if ((error as { code?: number }).code === 4902) {
+        await ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: '0x2105',
+            chainName: 'Base',
+            nativeCurrency: {
+              name: 'Ether',
+              symbol: 'ETH',
+              decimals: 18,
+            },
+            rpcUrls: ['https://mainnet.base.org'],
+            blockExplorerUrls: ['https://basescan.org'],
+          }],
+        });
+      } else {
+        throw error;
+      }
     }
   }, []);
 
@@ -157,16 +201,20 @@ export const useMetaMask = (config?: WalletConfig) => {
     disconnect,
     switchToSepolia,
     switchToMainnet,
+    switchToBase,
   };
 };
 
 // Extend window interface for TypeScript
 declare global {
   interface Window {
-    ethereum: any & {
+    ethereum: {
       isMetaMask?: boolean;
       isRabby?: boolean;
+      request?: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on?: (event: string, handler: (...args: unknown[]) => void) => void;
+      removeListener?: (event: string, handler: (...args: unknown[]) => void) => void;
     };
-    rabby?: any;
+    rabby?: { request?: (args: { method: string; params?: unknown[] }) => Promise<unknown> };
   }
 }

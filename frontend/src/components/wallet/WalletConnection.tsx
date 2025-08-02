@@ -55,10 +55,28 @@ export const WalletConnection: React.FC = () => {
         <CardContent className="pt-6">
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-neutral-100">Ethereum:</span>
-              <span className="text-sm font-mono">
-                {metamask.address && formatAddress(metamask.address)}
-              </span>
+              <span className="text-sm text-neutral-100">Base:</span>
+              <div className="flex items-center gap-2">
+                {metamask.chainId !== 8453 && (
+                  <Button
+                    onClick={async () => {
+                      try {
+                        await metamask.switchToBase();
+                      } catch (error) {
+                        console.error('Failed to switch to Base:', error);
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs px-2 py-1"
+                  >
+                    Switch to Base
+                  </Button>
+                )}
+                <span className="text-sm font-mono">
+                  {metamask.address && formatAddress(metamask.address)}
+                </span>
+              </div>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-neutral-100">Stellar:</span>
@@ -88,14 +106,14 @@ export const WalletConnection: React.FC = () => {
           <div className="text-center">
             <h3 className="text-lg font-semibold mb-2 text-neutral-0">Connect Your Wallets</h3>
             <p className="text-sm text-neutral-100 mb-4">
-              You need to connect both EVM and Stellar wallets to perform cross-chain swaps
+              You need to connect both Base and Stellar wallets to perform cross-chain swaps
             </p>
           </div>
           
           <div className="space-y-2">
             <div className="flex items-center justify-between p-2 rounded-xl border border-neutral-500/20 bg-neutral-700/50">
               <span className="text-sm">
-                EVM Wallet {metamask.isConnected ? '✓' : ''}
+                Base Wallet {metamask.isConnected ? '✓' : ''}
               </span>
               <span className="text-xs text-neutral-100">
                 {metamask.isConnected ? 'Connected' : 'Not connected'}
@@ -156,7 +174,7 @@ export const WalletConnection: React.FC = () => {
       onClose={() => setShowWalletSelector(false)}
       onSelectWallet={async (walletId: string) => {
         try {
-          await metamask.connect(walletId as any);
+          await metamask.connect(walletId);
           setShowWalletSelector(false);
         } catch (error) {
           console.error('Failed to connect wallet:', error);

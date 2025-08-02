@@ -31,7 +31,7 @@ export class EthereumMonitor extends BaseMonitor {
         logger.warn(`No escrow factory configured for ${chainConfig.name}`);
       }
     } catch (error) {
-      logger.error(`Failed to initialize Ethereum monitor for ${chainConfig.name}:`, error);
+      logger.error(`Failed to initialize Ethereum monitor for ${chainConfig.name}:`, error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -59,7 +59,7 @@ export class EthereumMonitor extends BaseMonitor {
       const balanceETH = ethers.formatEther(balance);
       logger.info(`Resolver balance on ${this.chainConfig.name}: ${balanceETH} ETH`);
       
-      if (balance === 0n) {
+      if (balance === BigInt(0)) {
         logger.warn(`⚠️  Resolver has zero balance on ${this.chainConfig.name}!`);
       }
       
@@ -69,7 +69,7 @@ export class EthereumMonitor extends BaseMonitor {
     } catch (error) {
       logger.error(`Failed to start Ethereum monitor:`, {
         chain: this.chainConfig.name,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         rpcUrl: this.chainConfig.rpcUrl,
       });
       throw error;
@@ -126,7 +126,7 @@ export class EthereumMonitor extends BaseMonitor {
           });
         }
       } catch (error) {
-        logger.error('Error parsing log:', error);
+        logger.error('Error parsing log:', error instanceof Error ? error.message : String(error));
       }
     }
 
@@ -199,7 +199,7 @@ export class EthereumMonitor extends BaseMonitor {
             break;
         }
       } catch (error) {
-        logger.error('Error parsing escrow log:', error);
+        logger.error('Error parsing escrow log:', error instanceof Error ? error.message : String(error));
       }
     }
   }

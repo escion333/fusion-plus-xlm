@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
 import { ethers } from 'ethers';
-import * as StellarSdk from 'stellar-sdk';
+// import * as StellarSdk from 'stellar-sdk';
 import { FusionAPI, getTokenAddress } from '@/services/api';
 import { useWallets } from '@/contexts/WalletContext';
+import { checkServicesHealth } from '@/utils/healthCheck';
 
 interface SwapState {
   isLoading: boolean;
@@ -15,7 +16,15 @@ interface SwapState {
     estimatedGas: string;
     isMockData?: boolean;
   } | null;
-  activeOrders: any[];
+  activeOrders: Array<{
+    orderHash: string;
+    srcAmount: string;
+    dstAmount: string;
+    srcChain: string;
+    dstChain: string;
+    status: string;
+    createdAt?: string;
+  }>;
 }
 
 export const useSwap = () => {
@@ -38,9 +47,20 @@ export const useSwap = () => {
     toChain: string,
     fromToken: string,
     toToken: string,
-    amount: string,
-    mockMode: boolean = false
+    amount: string
   ) => {
+    // Check service health first
+    const health = await checkServicesHealth();
+    if (!health.overall) {
+      const unhealthyServices = [];
+      if (health.resolver.status === 'unhealthy') {
+        unhealthyServices.push(`Resolver Service (${health.resolver.url})`);
+      }
+      if (health.proxy.status === 'unhealthy') {
+        unhealthyServices.push(`API Proxy (${health.proxy.url})`);
+      }
+      throw new Error(`Required services are not running: ${unhealthyServices.join(', ')}. Please start all services.`);
+    }
     try {
       const sourceToken = getTokenAddress(fromChain, fromToken);
       const destToken = getTokenAddress(toChain, toToken);
@@ -58,7 +78,7 @@ export const useSwap = () => {
         amount: amountInWei,
         fromChain,
         toChain,
-      }, mockMode);
+      });
       
       setState(prev => ({
         ...prev,
@@ -66,7 +86,6 @@ export const useSwap = () => {
           fromAmount: quote.fromAmount,
           toAmount: quote.toAmount,
           estimatedGas: quote.estimatedGas,
-          isMockData: quote.isMockData,
         },
       }));
       
@@ -83,11 +102,23 @@ export const useSwap = () => {
     toChain: string,
     fromToken: string,
     toToken: string,
-    amount: string,
-    mockMode: boolean = false
+    amount: string
   ) => {
     if (!metamask.isConnected) {
       throw new Error('MetaMask must be connected');
+    }
+    
+    // Check service health first
+    const health = await checkServicesHealth();
+    if (!health.overall) {
+      const unhealthyServices = [];
+      if (health.resolver.status === 'unhealthy') {
+        unhealthyServices.push(`Resolver Service (${health.resolver.url})`);
+      }
+      if (health.proxy.status === 'unhealthy') {
+        unhealthyServices.push(`API Proxy (${health.proxy.url})`);
+      }
+      throw new Error(`Required services are not running: ${unhealthyServices.join(', ')}. Please start all services.`);
     }
     
     setState(prev => ({ ...prev, isLoading: true, error: null }));
@@ -98,7 +129,7 @@ export const useSwap = () => {
       const destToken = getTokenAddress(toChain, toToken);
       
       // Get quote first
-      const quote = await getQuote(fromChain, toChain, fromToken, toToken, amount, mockMode);
+      const quote = await getQuote(fromChain, toChain, fromToken, toToken, amount);
       
       // Convert amount to proper decimals
       const makingAmountInWei = fromToken === 'ETH' 
@@ -120,7 +151,7 @@ export const useSwap = () => {
           destinationChain: toChain,
           stellarReceiver: toChain === 'stellar' ? (freighter.publicKey || undefined) : undefined,
         } : undefined,
-      }, mockMode);
+      });
       
       setState(prev => ({
         ...prev,
@@ -141,10 +172,21 @@ export const useSwap = () => {
   }, [metamask, freighter, getQuote]);
 
   // Fetch active orders
-  const fetchActiveOrders = useCallback(async (mockMode: boolean = false) => {
+  const fetchActiveOrders = useCallback(async () => {
     try {
-      const orders = await FusionAPI.getActiveOrders(metamask.address || undefined, mockMode);
-      setState(prev => ({ ...prev, activeOrders: orders }));
+      const orders = await FusionAPI.getActiveOrders(metamask.address || undefined);
+      setState(prev => ({ 
+        ...prev, 
+        activeOrders: orders.map(order => ({
+          orderHash: order.orderHash,
+          srcAmount: order.makingAmount,
+          dstAmount: order.takingAmount,
+          srcChain: 'base', // Default since FusionOrder doesn't have chain info
+          dstChain: order.crossChain?.destinationChain || 'base',
+          status: order.status,
+          createdAt: undefined
+        }))
+      }));
       return orders;
     } catch (error) {
       console.error('Error fetching active orders:', error);

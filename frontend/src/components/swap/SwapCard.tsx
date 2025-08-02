@@ -2,39 +2,39 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowDownIcon, Activity } from "lucide-react";
+import { ArrowDownIcon } from "lucide-react";
 import { ethers } from "ethers";
 import { TokenSelector } from "./TokenSelector";
 import { AmountInput } from "./AmountInput";
 import { useState, useEffect } from "react";
-import { EthereumLogo, StellarLogo } from "@/components/icons/ChainLogos";
+import { StellarLogo } from "@/components/icons/ChainLogos";
+import Image from "next/image";
 import { useWallets } from "@/contexts/WalletContext";
 import { useSwap } from "@/hooks/useSwap";
 import { useBalances } from "@/hooks/useBalances";
 import { useDebounce } from "@/hooks/useDebounce";
 import { FusionAPI } from "@/services/api";
 import { SwapProgress } from "./SwapProgress";
-import { Switch } from "@/components/ui/switch";
+import { ErrorDisplay } from "./ErrorDisplay";
 
 export function SwapCard() {
-  const [fromChain, setFromChain] = useState("ethereum");
+  const [fromChain, setFromChain] = useState("base");
   const [toChain, setToChain] = useState("stellar");
   const [fromToken, setFromToken] = useState("USDC");
   const [toToken, setToToken] = useState("USDC");
   const [fromAmount, setFromAmount] = useState("");
   const [toAmount, setToAmount] = useState("");
-  const [showActiveOrders, setShowActiveOrders] = useState(false);
   const [swapState, setSwapState] = useState<'idle' | 'creating' | 'pending' | 'processing' | 'completed' | 'failed'>('idle');
   const [orderHash, setOrderHash] = useState<string | null>(null);
   const [orderDetails, setOrderDetails] = useState<any>(null);
-  const [isMockMode, setIsMockMode] = useState(true);
+  const isMockMode = false; // Always live mode
 
-  const { isFullyConnected, connectWallets } = useWallets();
-  const { createFusionOrder, getQuote, isLoading, error, currentSwapId, swapStatus, quote, activeOrders, fetchActiveOrders } = useSwap();
+  const { isFullyConnected } = useWallets();
+  const { createFusionOrder, getQuote, isLoading, error, currentSwapId, swapStatus, quote } = useSwap();
   const { 
-    ethereum: ethBalance, 
+    base: baseBalance, 
     stellar: xlmBalance, 
-    ethereumUSDC: ethUSDCBalance,
+    baseUSDC: baseUSDCBalance,
     stellarUSDC: xlmUSDCBalance,
     loading: balancesLoading, 
     refreshBalances 
@@ -55,8 +55,7 @@ export function SwapCard() {
         toChain,
         fromToken,
         toToken,
-        fromAmount,
-        isMockMode
+        fromAmount
       );
       
       if (order && order.orderHash) {
@@ -66,29 +65,39 @@ export function SwapCard() {
         // Poll for order status updates
         const pollInterval = setInterval(async () => {
           try {
-            const status = await FusionAPI.getOrderStatus(order.orderHash, isMockMode);
+            const result = await FusionAPI.getOrderStatus(order.orderHash);
             
-            // Update order details
-            setOrderDetails({
-              resolver: status.resolver,
-              escrowAddresses: status.escrowAddresses,
-              txHashes: status.txHashes,
-            });
-            
-            // Update swap state based on order progress
-            if (status.progress === 'pending') {
+            // Update swap state based on order status
+            if (result.order.status === 'pending') {
               setSwapState('pending');
-            } else if (status.progress === 'processing') {
+            } else if (result.order.status === 'processing' || result.order.status === 'escrow_created') {
               setSwapState('processing');
-            } else if (status.progress === 'completed') {
+            } else if (result.order.status === 'completed') {
               setSwapState('completed');
               clearInterval(pollInterval);
               refreshBalances();
+              // Set order details including secret
+              setOrderDetails({
+                resolver: result.order.resolver,
+                secret: result.order.secret,
+                escrowAddresses: result.order.escrowAddresses,
+                txHashes: result.order.txHashes
+              });
               // Don't auto-reset - wait for user to close
-            } else if (status.progress === 'failed') {
+            } else if (result.order.status === 'failed' || result.order.status === 'cancelled') {
               setSwapState('failed');
               clearInterval(pollInterval);
               // Don't auto-reset - wait for user to close
+            }
+            
+            // Update order details for progress tracking
+            if (result.order.escrowAddresses || result.order.txHashes) {
+              setOrderDetails({
+                resolver: result.order.resolver,
+                secret: result.order.secret,
+                escrowAddresses: result.order.escrowAddresses,
+                txHashes: result.order.txHashes
+              });
             }
           } catch (error) {
             console.error('Failed to poll order status:', error);
@@ -105,21 +114,24 @@ export function SwapCard() {
     }
   };
 
-  // Fetch active orders on mount and when mock mode changes
-  useEffect(() => {
-    fetchActiveOrders(isMockMode);
-  }, [fetchActiveOrders, isMockMode]);
   
   // Get quote when amount changes (using debounced value)
   useEffect(() => {
     if (debouncedFromAmount && parseFloat(debouncedFromAmount) > 0 && isFullyConnected) {
-      getQuote(fromChain, toChain, fromToken, toToken, debouncedFromAmount, isMockMode)
+      getQuote(fromChain, toChain, fromToken, toToken, debouncedFromAmount)
         .then(quote => {
           // USDC has 6 decimals on both chains, XLM has 7, ETH has 18
           const decimals = toToken === 'XLM' ? 7 : toToken === 'ETH' ? 18 : 6;
           setToAmount(ethers.formatUnits(quote.toAmount, decimals));
         })
-        .catch(console.error);
+        .catch(error => {
+          console.error('Failed to get quote:', error);
+          setToAmount('');
+          if (!isMockMode) {
+            // In live mode, show the actual error
+            console.error('Live mode quote error:', error.message);
+          }
+        });
     }
   }, [debouncedFromAmount, fromChain, toChain, fromToken, toToken, getQuote, isFullyConnected, isMockMode]);
 
@@ -164,22 +176,9 @@ export function SwapCard() {
         swapState !== 'idle' ? 'opacity-50 pointer-events-none' : ''
       }`}>
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xl font-medium text-neutral-0">
-              Swap
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-neutral-300">
-                {isMockMode ? 'Mock' : 'Live'}
-              </span>
-              <Switch
-                checked={!isMockMode}
-                onCheckedChange={(checked) => setIsMockMode(!checked)}
-                aria-label="Toggle between mock and live mode"
-                className="data-[state=checked]:bg-brand-primary scale-75"
-              />
-            </div>
-          </div>
+          <CardTitle className="text-xl font-medium text-neutral-0">
+            Swap
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
         {/* Swap Container */}
@@ -197,8 +196,8 @@ export function SwapCard() {
                 {isFullyConnected && (
                   <div className="text-xs text-neutral-400">
                     Balance: {balancesLoading ? 'Loading...' : (
-                      fromChain === 'ethereum' 
-                        ? (fromToken === 'ETH' ? `${parseFloat(ethBalance).toFixed(4)} ETH` : `${parseFloat(ethUSDCBalance).toFixed(2)} USDC`)
+                      fromChain === 'base' 
+                        ? (fromToken === 'ETH' ? `${parseFloat(baseBalance).toFixed(4)} ETH` : `${parseFloat(baseUSDCBalance).toFixed(2)} USDC`)
                         : (fromToken === 'XLM' ? `${parseFloat(xlmBalance).toFixed(2)} XLM` : `${parseFloat(xlmUSDCBalance).toFixed(2)} USDC`)
                     )}
                   </div>
@@ -206,13 +205,13 @@ export function SwapCard() {
               </div>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2 px-3 py-2 bg-neutral-800/50 rounded-lg">
-                  {fromChain === 'ethereum' ? (
-                    <EthereumLogo className="w-5 h-5" />
+                  {fromChain === 'base' ? (
+                    <Image src="/base-light.svg" alt="Base" width={20} height={20} />
                   ) : (
                     <StellarLogo className="w-5 h-5" />
                   )}
                   <span className="text-sm font-medium text-neutral-200">
-                    {fromChain === 'ethereum' ? 'Ethereum' : 'Stellar'}
+                    {fromChain === 'base' ? 'Base' : 'Stellar'}
                   </span>
                 </div>
                 <TokenSelector
@@ -250,8 +249,8 @@ export function SwapCard() {
                 {isFullyConnected && (
                   <div className="text-xs text-neutral-400">
                     Balance: {balancesLoading ? 'Loading...' : (
-                      toChain === 'ethereum' 
-                        ? (toToken === 'ETH' ? `${parseFloat(ethBalance).toFixed(4)} ETH` : `${parseFloat(ethUSDCBalance).toFixed(2)} USDC`)
+                      toChain === 'base' 
+                        ? (toToken === 'ETH' ? `${parseFloat(baseBalance).toFixed(4)} ETH` : `${parseFloat(baseUSDCBalance).toFixed(2)} USDC`)
                         : (toToken === 'XLM' ? `${parseFloat(xlmBalance).toFixed(2)} XLM` : `${parseFloat(xlmUSDCBalance).toFixed(2)} USDC`)
                     )}
                   </div>
@@ -259,13 +258,13 @@ export function SwapCard() {
               </div>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2 px-3 py-2 bg-neutral-800/50 rounded-lg">
-                  {toChain === 'ethereum' ? (
-                    <EthereumLogo className="w-5 h-5" />
+                  {toChain === 'base' ? (
+                    <Image src="/base-light.svg" alt="Base" width={20} height={20} />
                   ) : (
                     <StellarLogo className="w-5 h-5" />
                   )}
                   <span className="text-sm font-medium text-neutral-200">
-                    {toChain === 'ethereum' ? 'Ethereum' : 'Stellar'}
+                    {toChain === 'base' ? 'Base' : 'Stellar'}
                   </span>
                 </div>
                 <TokenSelector
@@ -296,9 +295,17 @@ export function SwapCard() {
 
         {/* Error Display */}
         {error && (
-          <div className="text-red-400 text-sm p-3 border border-red-500/20 rounded-xl bg-red-500/10">
-            {error}
-          </div>
+          <ErrorDisplay 
+            error={error} 
+            onRetry={() => {
+              // Retry fetching quote if amount is set
+              if (fromAmount && parseFloat(fromAmount) > 0) {
+                getQuote(fromChain, toChain, fromToken, toToken, fromAmount)
+                  .catch(err => console.error('Retry failed:', err));
+              }
+            }}
+            isMockMode={isMockMode}
+          />
         )}
 
         {/* Swap Status */}
@@ -309,39 +316,6 @@ export function SwapCard() {
           </div>
         )}
 
-        {/* Active Orders */}
-        {activeOrders.length > 0 && (
-          <div className="border-t border-neutral-700/50 pt-4 space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-neutral-0">Active Orders</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowActiveOrders(!showActiveOrders)}
-                className="text-neutral-100 hover:text-neutral-0 hover:bg-neutral-700/50"
-              >
-                <Activity className="h-4 w-4 mr-1" />
-                {activeOrders.length}
-              </Button>
-            </div>
-            {showActiveOrders && (
-              <div className="space-y-2">
-                {activeOrders.slice(0, 3).map((order: any) => (
-                  <div key={order.orderHash} className="text-xs p-3 border border-neutral-700/50 rounded-xl bg-neutral-700/30">
-                    <div className="flex justify-between">
-                      <span className="text-neutral-100">Order ID:</span>
-                      <span className="font-mono text-neutral-0">{order.orderHash.slice(0, 10)}...</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-neutral-100">Status:</span>
-                      <span className="text-brand-secondary">{order.status}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Swap Button */}
         <button 

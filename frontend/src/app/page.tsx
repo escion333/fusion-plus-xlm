@@ -1,5 +1,6 @@
 import { SwapCard } from "@/components/swap/SwapCard";
 import { Header } from "@/components/layout/Header";
+import { ServiceStatus } from "@/components/swap/ServiceStatus";
 
 export default function Home() {
   return (
@@ -35,6 +36,9 @@ export default function Home() {
           </div>
         </section>
       </div>
+      
+      {/* Service Status Indicator */}
+      <ServiceStatus />
     </div>
   );
 }

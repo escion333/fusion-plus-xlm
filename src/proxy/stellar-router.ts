@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import fetch from 'node-fetch';
 
 const router = Router();
@@ -7,7 +7,7 @@ const router = Router();
 const EXTENDED_RESOLVER_URL = process.env.EXTENDED_RESOLVER_URL || 'http://localhost:3003';
 
 // Route Stellar-related orders to our extended resolver
-router.post('/api/fusion/orders/create', async (req: Request, res: Response) => {
+router.post('/api/fusion/orders/create', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const order = req.body;
     
@@ -53,19 +53,23 @@ router.post('/api/fusion/orders/create', async (req: Request, res: Response) => 
 });
 
 // Get order status from extended resolver
-router.get('/api/fusion/orders/:orderHash', async (req: Request, res: Response) => {
+router.get('/api/fusion/orders/:orderHash', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { orderHash } = req.params;
     
     // Try extended resolver first
-    const response = await fetch(`${EXTENDED_RESOLVER_URL}/api/orders/${orderHash}/status`);
+    const response = await fetch(`${EXTENDED_RESOLVER_URL}/api/orders/${orderHash}`);
     
     if (response.ok) {
       const result = await response.json();
       return res.json({
         order: {
           orderHash,
-          status: result.status,
+          status: result.order?.status || result.status,
+          secret: result.order?.secret || result.secret,
+          resolver: result.order?.resolver || result.resolver,
+          escrowAddresses: result.order?.stellar || result.escrowAddresses,
+          txHashes: result.order?.txHashes || result.txHashes,
           ...result.details,
         },
       });

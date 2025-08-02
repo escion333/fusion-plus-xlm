@@ -7,6 +7,7 @@ import { logger } from './utils/logger';
 
 export class SwapOrchestrator extends EventEmitter {
   private processingQueue: Map<string, Promise<void>> = new Map();
+  private escrowAddresses: Map<string, string> = new Map();
 
   constructor(
     private secretManager: SecretManager,
@@ -64,7 +65,7 @@ export class SwapOrchestrator extends EventEmitter {
     
     try {
       // Generate secret for this swap
-      const secretData = this.secretManager.generateSecret(event.orderHash);
+      const secretData = await this.secretManager.generateSecret(event.orderHash);
       logger.info(`Generated secret for order ${event.orderHash}`);
       
       // Determine destination chain
@@ -174,9 +175,22 @@ export class SwapOrchestrator extends EventEmitter {
       taker: swap.maker, // Swapped
       token: swap.takerAsset || this.getDefaultToken(chain),
       amount: swap.takerAmount || '0',
-      safetyDeposit: '0', // TODO: Calculate safety deposit
+      safetyDeposit: this.calculateSafetyDeposit(swap.takerAmount || '0'),
       timelocks: this.packTimelocks(swap.timelocks),
     };
+  }
+
+  /**
+   * Calculate safety deposit (5% of amount)
+   */
+  private calculateSafetyDeposit(amount: string): string {
+    try {
+      const bigAmount = BigInt(amount);
+      const safetyDeposit = (bigAmount * BigInt(5)) / BigInt(100);
+      return safetyDeposit.toString();
+    } catch {
+      return '0';
+    }
   }
 
   /**
@@ -316,9 +330,23 @@ export class SwapOrchestrator extends EventEmitter {
    * Get escrow address for swap on specified chain
    */
   private async getEscrowAddress(swap: SwapOrder, chain: string): Promise<string> {
-    // TODO: Implement escrow address tracking
-    // For now, return placeholder
-    return `escrow-${swap.orderHash}-${chain}`;
+    // Check if we have stored the escrow address
+    const escrowKey = `${swap.orderHash}-${chain}`;
+    const storedAddress = this.escrowAddresses.get(escrowKey);
+    
+    if (storedAddress) {
+      return storedAddress;
+    }
+    
+    // If not stored, calculate deterministically (for Stellar)
+    if (chain === 'stellar') {
+      // For Stellar, we can calculate the address deterministically
+      // This would be done by the factory contract
+      return `stellar-escrow-${swap.orderHash}`;
+    }
+    
+    // For EVM chains, we need to query events
+    throw new Error(`Escrow address not found for ${chain}`);
   }
 
   /**

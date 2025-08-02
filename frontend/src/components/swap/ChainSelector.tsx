@@ -7,7 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EthereumLogo, StellarLogo } from "@/components/icons/ChainLogos";
+import { StellarLogo } from "@/components/icons/ChainLogos";
+import Image from "next/image";
 
 interface Chain {
   id: string;
@@ -16,7 +17,7 @@ interface Chain {
 }
 
 const CHAINS: Chain[] = [
-  { id: "ethereum", name: "Ethereum", icon: <EthereumLogo className="w-5 h-5" /> },
+  { id: "base", name: "Base", icon: <Image src="/base-light.svg" alt="Base" width={20} height={20} /> },
   { id: "stellar", name: "Stellar", icon: <StellarLogo className="w-5 h-5" /> },
 ];
 

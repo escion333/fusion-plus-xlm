@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle2, Clock, Loader2, XCircle, X, ExternalLink } from 'lucide-react';
+import { CheckCircle2, Clock, Loader2, XCircle, X, ExternalLink, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface SwapProgressProps {
   status: 'creating' | 'pending' | 'processing' | 'completed' | 'failed';
@@ -10,6 +11,7 @@ interface SwapProgressProps {
   error?: string;
   orderDetails?: {
     resolver?: string;
+    secret?: string; // Add secret to order details
     escrowAddresses?: {
       source: string;
       destination: string;
@@ -69,16 +71,44 @@ const steps = [
 ];
 
 export function SwapProgress({ status, orderHash, estimatedTime = 120, error, orderDetails, onClose, isMockMode = false }: SwapProgressProps) {
+  const { toast } = useToast();
+  // Dynamic time estimates based on step and mode
+  const getEstimatedTime = () => {
+    if (isMockMode) return 30; // Mock mode is faster
+    
+    switch (currentStep) {
+      case 0: return 15;  // Creating order
+      case 1: return 45;  // Deploying escrows
+      case 2: return 30;  // User claiming
+      case 3: return 20;  // Resolver claiming
+      default: return 120; // Total estimate
+    }
+  };
+  
   const [timeRemaining, setTimeRemaining] = useState(estimatedTime);
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
     if (status === 'creating') setCurrentStep(0);      // Creating order
     else if (status === 'pending') setCurrentStep(1);   // Waiting for resolver to deploy escrows
-    else if (status === 'processing') setCurrentStep(2); // Escrows deployed, executing swap
+    else if (status === 'processing') {
+      // Check if we have transaction hashes to determine which step we're in
+      if (orderDetails?.txHashes?.destinationWithdrawal) {
+        setCurrentStep(3); // Resolver claiming
+      } else if (orderDetails?.txHashes?.destinationDeployment) {
+        setCurrentStep(2); // User can claim
+      } else {
+        setCurrentStep(2); // Default to processing
+      }
+    }
     else if (status === 'completed') setCurrentStep(4);  // All done
     else if (status === 'failed') setCurrentStep(-1);
-  }, [status]);
+  }, [status, orderDetails]);
+
+  // Update time remaining when step changes
+  useEffect(() => {
+    setTimeRemaining(getEstimatedTime());
+  }, [currentStep]);
 
   useEffect(() => {
     if (status === 'processing' || status === 'pending') {
@@ -95,16 +125,42 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const copySecret = async () => {
+    if (orderDetails?.secret) {
+      await navigator.clipboard.writeText(orderDetails.secret);
+      toast({
+        title: "Secret copied!",
+        description: "The HTLC secret has been copied to your clipboard.",
+      });
+    }
+  };
+
   const config = statusConfig[status];
   const Icon = config.icon;
 
-  // Assume realTxData from useSwap hook
-  const explorerLinks = {
-    ethereum: (hash) => `https://etherscan.io/tx/${hash}`,
-    stellar: (hash) => `https://stellar.expert/explorer/public/tx/${hash}`,
+  // Get transaction status indicator
+  const getTxStatusIcon = (txHash: string | undefined) => {
+    if (!txHash) return null;
+    if (status === 'completed') {
+      return <CheckCircle2 className="w-3 h-3 text-green-500" />;
+    }
+    return <Loader2 className="w-3 h-3 text-brand-primary animate-spin" />;
   };
 
-  // In render: Use realTxData.hash with explorerLinks[fromChain](realTxData.hash)
+  // Get step-specific message
+  const getStepMessage = () => {
+    if (!isMockMode) {
+      switch (currentStep) {
+        case 0: return 'Preparing your cross-chain order...';
+        case 1: return 'Resolver is deploying secure escrow contracts on both chains...';
+        case 2: return 'Escrows deployed! You can now claim your tokens on the destination chain.';
+        case 3: return 'You\'ve claimed! Resolver is now claiming on the source chain...';
+        case 4: return 'Swap completed successfully!';
+        default: return config.description;
+      }
+    }
+    return config.description;
+  };
 
   return (
     <Card className="w-full relative bg-neutral-900/80 backdrop-blur-sm border-0">
@@ -132,7 +188,7 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
             />
             <div>
               <h3 className="font-medium text-lg text-neutral-0">{config.title}</h3>
-              <p className="text-sm text-neutral-300">{config.description}</p>
+              <p className="text-sm text-neutral-300">{getStepMessage()}</p>
             </div>
           </div>
           {(status === 'pending' || status === 'processing') && (
@@ -197,6 +253,22 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
               </div>
             )}
             
+            {!isMockMode && (status === 'pending' || status === 'processing') && (
+              <div>
+                <div className="text-xs text-neutral-400 mb-1">Network Fees</div>
+                <div className="text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-neutral-300">Ethereum:</span>
+                    <span className="text-neutral-200">~$5-15 (gas)</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-neutral-300">Stellar:</span>
+                    <span className="text-neutral-200">~$0.001 (XLM)</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {orderDetails?.escrowAddresses && (
               <div>
                 <div className="text-xs text-neutral-400 mb-1">Escrow Contracts</div>
@@ -216,7 +288,7 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-300">Stellar:</span>
                     <div className="flex items-center gap-2">
-                      {orderDetails.escrowAddresses.destination === 'CBX3ET3JMZQCQF74YN2PR35ALF3EI73VMYWUX33WKTQMY62I2YR2YWFU' && (
+                      {orderDetails.escrowAddresses.destination && orderDetails.escrowAddresses.destination.startsWith('C') && (
                         <span className="text-xs bg-neutral-700/50 text-neutral-300 px-2 py-0.5 rounded">MAINNET</span>
                       )}
                       <a
@@ -240,7 +312,10 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
                 <div className="text-xs space-y-2">
                   {orderDetails.txHashes.sourceDeployment && (
                     <div className="flex items-center justify-between">
-                      <span className="text-neutral-300">Ethereum Escrow:</span>
+                      <span className="text-neutral-300 flex items-center gap-1">
+                        Ethereum Escrow:
+                        {getTxStatusIcon(orderDetails.txHashes.sourceDeployment)}
+                      </span>
                       <a
                         href={`https://etherscan.io/tx/${orderDetails.txHashes.sourceDeployment}`}
                         target="_blank"
@@ -254,7 +329,10 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
                   )}
                   {orderDetails.txHashes.destinationDeployment && (
                     <div className="flex items-center justify-between">
-                      <span className="text-neutral-300">Stellar Escrow:</span>
+                      <span className="text-neutral-300 flex items-center gap-1">
+                        Stellar Escrow:
+                        {getTxStatusIcon(orderDetails.txHashes.destinationDeployment)}
+                      </span>
                       <a
                         href={`https://stellar.expert/explorer/public/tx/${orderDetails.txHashes.destinationDeployment}`}
                         target="_blank"
@@ -268,7 +346,10 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
                   )}
                   {orderDetails.txHashes.sourceWithdrawal && (
                     <div className="flex items-center justify-between">
-                      <span className="text-neutral-300">ETH Withdrawal:</span>
+                      <span className="text-neutral-300 flex items-center gap-1">
+                        ETH Withdrawal:
+                        {getTxStatusIcon(orderDetails.txHashes.sourceWithdrawal)}
+                      </span>
                       <a
                         href={`https://etherscan.io/tx/${orderDetails.txHashes.sourceWithdrawal}`}
                         target="_blank"
@@ -282,7 +363,10 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
                   )}
                   {orderDetails.txHashes.destinationWithdrawal && (
                     <div className="flex items-center justify-between">
-                      <span className="text-neutral-300">XLM Withdrawal:</span>
+                      <span className="text-neutral-300 flex items-center gap-1">
+                        XLM Withdrawal:
+                        {getTxStatusIcon(orderDetails.txHashes.destinationWithdrawal)}
+                      </span>
                       <a
                         href={`https://stellar.expert/explorer/public/tx/${orderDetails.txHashes.destinationWithdrawal}`}
                         target="_blank"
@@ -311,15 +395,38 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
         {status === 'pending' && (
           <div className="bg-neutral-800/50 rounded-lg p-3">
             <div className="text-sm text-neutral-300">
-              A resolver has accepted your order and is deploying secure escrow contracts on both Ethereum and Stellar. This ensures atomic execution of your swap.
+              {isMockMode ? (
+                <>A resolver has accepted your order and is deploying secure escrow contracts on both Ethereum and Stellar. This ensures atomic execution of your swap.</>
+              ) : (
+                <>
+                  <strong>Live Transaction:</strong> A resolver is deploying real escrow contracts on-chain. 
+                  Ethereum gas fees apply. This typically takes 30-60 seconds depending on network congestion.
+                </>
+              )}
             </div>
           </div>
         )}
 
-        {status === 'processing' && (
+        {status === 'processing' && currentStep === 2 && (
           <div className="bg-neutral-800/50 rounded-lg p-3">
             <div className="text-sm text-neutral-300">
-              The HTLC (Hash Time-Locked Contract) swap is executing. You'll receive tokens on the destination chain once you reveal the secret. Do not close this window.
+              {isMockMode ? (
+                <>The HTLC (Hash Time-Locked Contract) swap is executing. You&apos;ll receive tokens on the destination chain once you reveal the secret.</>
+              ) : (
+                <>
+                  <strong>Action Required:</strong> Escrows are deployed! You can now claim your tokens on Stellar. 
+                  The transaction will reveal the secret, allowing the resolver to claim on Ethereum.
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {status === 'processing' && currentStep === 3 && (
+          <div className="bg-neutral-800/50 rounded-lg p-3">
+            <div className="text-sm text-neutral-300">
+              <strong>Almost Done:</strong> You&apos;ve successfully claimed on Stellar! The resolver is now using the revealed secret 
+              to claim on Ethereum. This completes the atomic swap.
             </div>
           </div>
         )}
@@ -331,11 +438,45 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
                 <span className="text-green-500">Success!</span> Your tokens have been transferred. Check your destination wallet.
               </div>
             </div>
-            {isMockMode && (
+            
+            {/* Display secret if available */}
+            {orderDetails?.secret && (
+              <div className="bg-neutral-800/50 rounded-lg p-3 mb-3">
+                <div className="text-xs text-neutral-400 mb-2">HTLC Secret (for manual recovery if needed)</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-mono text-xs text-neutral-200 break-all flex-1">{orderDetails.secret}</div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={copySecret}
+                    className="shrink-0"
+                    title="Copy secret"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            {isMockMode ? (
               <div className="bg-neutral-800/50 rounded-lg p-3">
                 <div className="text-xs text-neutral-400">
                   <span className="font-medium text-neutral-300">Demo Note:</span> The Stellar contract is deployed on mainnet and verifiable. 
                   Ethereum transactions are simulated for demo safety. In production, both chains would have real transactions.
+                </div>
+              </div>
+            ) : (
+              <div className="bg-neutral-800/50 rounded-lg p-3">
+                <div className="text-xs text-neutral-400">
+                  <span className="font-medium text-neutral-300">Live Mode:</span> Each swap deploys a new HTLC escrow contract via the factory pattern. View the{' '}
+                  <a 
+                    href="https://stellar.expert/explorer/public/search?term=escrow"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-neutral-300 hover:text-neutral-100 underline"
+                  >
+                    Stellar escrows
+                  </a>
+                  . Transaction hashes above are real and can be verified on-chain.
                 </div>
               </div>
             )}

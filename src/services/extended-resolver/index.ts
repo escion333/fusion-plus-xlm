@@ -55,7 +55,7 @@ app.post('/api/orders/create', async (req: Request, res: Response) => {
     });
 
     // Generate order hash
-    const orderHash = '0x' + ethers.randomBytes(32).toString();
+    const orderHash = ethers.hexlify(ethers.randomBytes(32));
     
     // Create cross-chain order
     const crossChainOrder: CrossChainOrder = {
@@ -103,7 +103,7 @@ app.post('/api/orders/create', async (req: Request, res: Response) => {
         taker: crossChainOrder.taker,
         amount: crossChainOrder.takingAmount.toString(),
         token: order.token || 'XLM',
-        stellarReceiver: order.stellarReceiver || crossChainOrder.maker,
+        stellarReceiver: order.crossChain?.stellarReceiver || order.stellarReceiver || process.env.DEMO_STELLAR_USER!,
       });
 
       if (htlcResult.success) {
@@ -113,9 +113,10 @@ app.post('/api/orders/create', async (req: Request, res: Response) => {
           status: 'processing',
           srcChain: srcChainId === STELLAR_CHAIN_ID ? 'stellar' : 'ethereum',
           dstChain: 'stellar',
-          stellarTxHash: htlcResult.transactionHash,
-          explorerUrl: htlcResult.explorerUrl,
-          escrowAddress: htlcResult.escrowAddress,
+          ethereum: htlcResult.ethereum,
+          stellar: htlcResult.stellar,
+          secret: htlcResult.secret, // Save this for testing
+          secretHash: htlcResult.secretHash,
         });
       } else {
         res.status(500).json({

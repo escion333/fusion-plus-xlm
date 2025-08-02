@@ -1,4 +1,4 @@
-import { QuoteParams, SwapParams, ETHEREUM_ADDRESS_REGEX, AMOUNT_REGEX } from './types';
+import { QuoteParams, SwapParams, ETHEREUM_ADDRESS_REGEX, AMOUNT_REGEX } from './types.js';
 
 export class ValidationError extends Error {
   constructor(public field: string, public reason: string) {

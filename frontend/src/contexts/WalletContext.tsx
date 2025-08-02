@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode, useState } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 import { useMetaMask } from '@/hooks/useMetaMask';
 import { useFreighter } from '@/hooks/useFreighter';
 
@@ -21,15 +21,22 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const connectWallets = async () => {
     try {
       // Connect directly to Rabby (or whatever wallet is available)
-      await metamask.connect('auto');
+      const walletConnection = await metamask.connect('auto');
+      
+      // After connection, ensure we're on Base mainnet
+      if (walletConnection && walletConnection.provider) {
+        const network = await walletConnection.provider.getNetwork();
+        const chainId = Number(network.chainId);
+        console.log('Connected to chain:', chainId);
+        
+        if (chainId !== 8453) {
+          console.log('Switching to Base mainnet...');
+          await metamask.switchToBase();
+        }
+      }
       
       // Connect Freighter for Stellar
       await freighter.connect();
-      
-      // Ensure wallet is on mainnet (chain ID 1)
-      if (metamask.chainId && metamask.chainId !== 1) {
-        await metamask.switchToMainnet();
-      }
     } catch (error) {
       console.error('Error connecting wallets:', error);
       throw error;

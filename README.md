@@ -1,12 +1,17 @@
-# Fusion+ Extension
+# Fusion+ Extension - Base ↔ Stellar Cross-Chain Swaps
 
-Cross-chain swap interface between Ethereum and Stellar networks using 1inch Fusion+ protocol.
+Cross-chain USDC swap implementation between Base (Ethereum L2) and Stellar networks using 1inch Fusion+ protocol.
+
+## Overview
+
+This project extends the 1inch Fusion+ protocol to enable seamless cross-chain swaps between Base (Ethereum L2) and Stellar networks. It implements a novel factory pattern for Stellar HTLC escrows and integrates with the 1inch resolver system.
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Shadcn/ui
 - **Smart Contracts**: 
   - Stellar: Rust/Soroban with WASM compilation
+  - Stellar Factory: Deploys multiple HTLC escrows per swap
   - Ethereum: Solidity with Hardhat framework
   - Integration with 1inch Limit Order Protocol
 - **Backend**: Node.js, Express, PostgreSQL
@@ -21,25 +26,13 @@ Cross-chain swap interface between Ethereum and Stellar networks using 1inch Fus
 - MetaMask wallet (for Ethereum)
 - Freighter wallet (for Stellar)
 
-## 🎬 Demo the Integration
+## Key Features
 
-### Run the Mainnet Demo
-```bash
-# Navigate to extended resolver
-cd extended-resolver
-
-# Install dependencies
-npm install
-
-# Run the mainnet demo
-npm run demo:mainnet
-```
-
-This will show:
-- ✅ Deployed mainnet contract details
-- ✅ Cross-chain swap flow demonstration
-- ✅ Real transaction proof
-- ✅ Integration architecture
+- **Cross-Chain Swaps**: Seamless USDC transfers between Base and Stellar
+- **Factory Pattern**: Multiple HTLC escrows per user via factory contract
+- **1inch Integration**: Extended resolver supporting non-EVM chains
+- **Secure Escrows**: Time-locked HTLCs with deterministic addressing
+- **Full UI**: User-friendly interface for cross-chain swaps
 
 ## 🏃 Quick Start
 
@@ -56,10 +49,8 @@ This will show:
 
 3. **Set up environment variables**
    ```bash
-   # The .env file is pre-configured for demo mode
-   # To use with real mainnet, update the following in .env:
-   # - ETHEREUM_RPC_URL: Add your Infura/Alchemy API key
-   # - MOCK_MODE: Set to false for real transactions
+   cp .env.example .env
+   # Edit .env with your configuration
    ```
 
 4. **Start the development environment**
@@ -94,7 +85,6 @@ fusion-plus-xlm/
 
 ```
 
-⚠️ **Important**: The resolver architecture requires significant changes. See `docs/ai-plans/resolver-contract-specification.md` for the correct implementation.
 
 ## 💻 Development
 
@@ -150,7 +140,15 @@ See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment instructions.
 - Time-locked escrow contracts
 - Comprehensive test coverage
 
-See [SECURITY.md](SECURITY_IMPROVEMENTS.md) for detailed security measures.
+## 🔗 Contract Addresses
+
+### Mainnet
+- **Base Resolver**: `0x8Da2180238380Fcf16Af6e6d9c8d2620E5093dA1`
+- **Stellar Factory**: `CDBO2XF6X6EJPI25DYZRDY3TEE2O4WTVZQN5YK5BVGU2I66X3LWEQQJL`
+
+### Testnet
+- **Base Resolver**: See deployment scripts
+- **Stellar Factory**: `CCQZ5LB3WA7XBJQYORYUUWAJDWCM7UXIEHHDNJWFSN6E337IZ4Q43MQG`
 
 ## 🤝 Contributing
 
@@ -172,9 +170,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [1inch Network](https://1inch.io/) for the Fusion+ protocol
 - [Stellar Development Foundation](https://stellar.org/) for the Stellar network
 
-## Full Hackathon Context (New)
-
-[Insert summary, including relayer/resolver details, no non-EVM LOP requirement, etc.]
 
 ---
 

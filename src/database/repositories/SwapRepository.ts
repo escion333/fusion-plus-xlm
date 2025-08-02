@@ -55,7 +55,9 @@ export class SwapRepository {
     `;
 
     try {
-      await this.pool.query(createTableQuery);
+      if (this.pool) {
+        await this.pool.query(createTableQuery);
+      }
       logger.info('Swap repository initialized');
     } catch (error) {
       logger.error('Failed to initialize swap repository:', error);
@@ -99,7 +101,9 @@ export class SwapRepository {
     ];
 
     try {
-      await this.pool.query(query, values);
+      if (this.pool) {
+        await this.pool.query(query, values);
+      }
       logger.info('Swap created', { orderHash: swap.orderHash });
     } catch (error) {
       logger.error('Failed to create swap:', error);
@@ -108,6 +112,13 @@ export class SwapRepository {
   }
 
   async update(swap: SwapOrder): Promise<void> {
+    if (this.inMemory) {
+      // In-memory implementation
+      this.swaps.set(swap.id, swap);
+      logger.info('Swap updated in memory', { orderHash: swap.orderHash, status: swap.status });
+      return;
+    }
+    
     const query = `
       UPDATE swaps SET
         maker = $2, taker = $3, maker_asset = $4, taker_asset = $5,
@@ -134,7 +145,9 @@ export class SwapRepository {
     ];
 
     try {
-      await this.pool.query(query, values);
+      if (this.pool) {
+        await this.pool.query(query, values);
+      }
       logger.info('Swap updated', { orderHash: swap.orderHash, status: swap.status });
     } catch (error) {
       logger.error('Failed to update swap:', error);
@@ -143,10 +156,15 @@ export class SwapRepository {
   }
 
   async findByOrderHash(orderHash: string): Promise<SwapOrder | null> {
+    if (this.inMemory) {
+      // In-memory implementation
+      return this.swaps.get(orderHash) || null;
+    }
+    
     const query = 'SELECT * FROM swaps WHERE order_hash = $1';
 
     try {
-      const result = await this.pool.query(query, [orderHash]);
+      const result = await this.pool!.query(query, [orderHash]);
       
       if (result.rows.length === 0) {
         return null;
@@ -163,7 +181,7 @@ export class SwapRepository {
     const query = 'SELECT * FROM swaps WHERE status = $1 ORDER BY created_at DESC';
 
     try {
-      const result = await this.pool.query(query, [status]);
+      const result = await this.pool!.query(query, [status]);
       return result.rows.map(row => this.mapRowToSwap(row));
     } catch (error) {
       logger.error('Failed to find swaps by status:', error);
@@ -179,7 +197,7 @@ export class SwapRepository {
     `;
 
     try {
-      const result = await this.pool.query(query, [
+      const result = await this.pool!.query(query, [
         SwapStatus.COMPLETED,
         SwapStatus.CANCELLED,
         SwapStatus.FAILED,
@@ -199,7 +217,7 @@ export class SwapRepository {
     `;
 
     try {
-      const result = await this.pool.query(query, [
+      const result = await this.pool!.query(query, [
         SwapStatus.COMPLETED,
         SwapStatus.CANCELLED,
         SwapStatus.FAILED,
@@ -234,6 +252,8 @@ export class SwapRepository {
   }
 
   async close(): Promise<void> {
-    await this.pool.end();
+    if (this.pool) {
+      await this.pool.end();
+    }
   }
 }

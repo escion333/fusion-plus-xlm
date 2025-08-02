@@ -23,7 +23,8 @@ export const config = {
             chainId: STELLAR_CHAIN_ID,
             url: 'https://horizon.stellar.org',
             testnet: false,
-            resolverContract: 'CBX3ET3JMZQCQF74YN2PR35ALF3EI73VMYWUX33WKTQMY62I2YR2YWFU', // Mainnet HTLC
+            resolverContract: 'CBX3ET3JMZQCQF74YN2PR35ALF3EI73VMYWUX33WKTQMY62I2YR2YWFU', // Legacy HTLC - DO NOT USE
+            factoryContract: process.env.STELLAR_FACTORY_MAINNET || '', // Factory for new escrows
             tokens: {
                 USDC: {
                     address: 'CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75',

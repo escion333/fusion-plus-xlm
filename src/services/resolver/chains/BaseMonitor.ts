@@ -12,6 +12,8 @@ export abstract class BaseMonitor extends EventEmitter {
   protected lastProcessedBlock: number = 0;
   protected isRunning: boolean = false;
   protected pollingInterval: NodeJS.Timeout | null = null;
+  protected lastProcessedBlocks: Map<string, number> = new Map();
+  protected chainId: string;
 
   constructor(
     protected chainConfig: ChainConfig,
@@ -19,6 +21,7 @@ export abstract class BaseMonitor extends EventEmitter {
     protected pollingIntervalMs: number = 5000
   ) {
     super();
+    this.chainId = String(chainConfig.id);
   }
 
   abstract start(): Promise<void>;
@@ -86,12 +89,16 @@ export abstract class BaseMonitor extends EventEmitter {
   }
 
   protected async loadLastProcessedBlock(): Promise<number> {
-    // TODO: Load from database
-    return 0;
+    // Store in memory for now - in production this would be persisted
+    const key = `lastBlock_${this.chainId}`;
+    const stored = this.lastProcessedBlocks.get(key);
+    return stored || 0;
   }
 
-  protected async saveLastProcessedBlock(_blockNumber: number): Promise<void> {
-    // TODO: Save to database
+  protected async saveLastProcessedBlock(blockNumber: number): Promise<void> {
+    // Store in memory for now - in production this would be persisted
+    const key = `lastBlock_${this.chainId}`;
+    this.lastProcessedBlocks.set(key, blockNumber);
   }
 
   protected async withRetry<T>(

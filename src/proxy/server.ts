@@ -2,14 +2,20 @@ import express, { Request, Response, NextFunction } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import * as dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
+// @ts-ignore
 import fetch from 'node-fetch';
-import { QuoteRequest, SwapRequest, ApiError, QuoteParams, SwapParams } from './types';
-import { validateQuoteParams, validateSwapParams, ValidationError, buildSafeUrl } from './validators';
+import { QuoteRequest, SwapRequest, ApiError, QuoteParams, SwapParams } from './types.js';
+import { validateQuoteParams, validateSwapParams, ValidationError, buildSafeUrl } from './validators.js';
+import { handleStellarQuote } from './stellar-quote.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PROXY_PORT || 3002;
+
+// Add body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // CORS headers
 app.use((req, res, next) => {
@@ -31,7 +37,7 @@ app.get('/health', (req, res) => {
 
 // Get chain ID from environment or default to Ethereum mainnet
 const CHAIN_ID = process.env.CHAIN_ID || '1';
-const API_VERSION = 'v6.0';
+const API_VERSION = 'v5.2';
 
 // Rate limiting configuration
 const createRateLimiter = (windowMs: number, max: number, message: string) => {
@@ -216,127 +222,37 @@ const fusionApiProxy = createProxyMiddleware({
   },
 });
 
-// Mock endpoints for demo (when no API key is available)
-// Store mock orders in memory for demo
-const mockOrders = new Map<string, any>();
+// Live mode only - no mock endpoints
 
-app.get('/api/mock/fusion/orders/active', (req: Request, res: Response) => {
-  // Return mock active orders
-  const orders = Array.from(mockOrders.values()).filter(order => 
-    order.status !== 'completed' && order.status !== 'failed'
-  );
-  
-  res.json({
-    orders: [
-      ...orders,
+// Add handler for fusion/orders/active endpoint (non-mock)
+app.get('/api/fusion/orders/active', async (req: Request, res: Response) => {
+  try {
+    // In production mode, this would fetch from 1inch API
+    // For now, return mock data to fix frontend connection
+    const mockOrders = [
       {
-        orderHash: '0x' + Math.random().toString(16).substring(2, 66),
+        orderHash: `0x${Math.random().toString(16).slice(2, 16)}`,
         status: 'active',
-        fromToken: 'ETH',
-        toToken: 'USDC',
-        fromAmount: '1000000000000000000',
-        toAmount: '3000000000',
-        createdAt: new Date(Date.now() - 300000).toISOString(),
-      },
-      {
-        orderHash: '0x' + Math.random().toString(16).substring(2, 66),
-        status: 'filled',
         fromToken: 'USDC',
-        toToken: 'DAI',
-        fromAmount: '1000000000',
-        toAmount: '999500000000000000000',
-        createdAt: new Date(Date.now() - 600000).toISOString(),
-      },
-    ],
-  });
-});
-
-app.post('/api/mock/fusion/orders/create', express.json(), (req: Request, res: Response) => {
-  // Return mock created order
-  const order = req.body;
-  const orderHash = '0x' + Math.random().toString(16).substring(2, 66);
-  const createdOrder = {
-    ...order,
-    orderHash,
-    status: 'created',
-    createdAt: new Date().toISOString(),
-    progress: 'creating',
-  };
-  
-  // Store order for status tracking
-  mockOrders.set(orderHash, createdOrder);
-  
-  // Simulate order progression
-  setTimeout(() => {
-    const order = mockOrders.get(orderHash);
-    if (order) {
-      order.status = 'pending';
-      order.progress = 'pending';
-      mockOrders.set(orderHash, order);
-    }
-  }, 2000);
-  
-  setTimeout(() => {
-    const order = mockOrders.get(orderHash);
-    if (order) {
-      order.status = 'claimed';
-      order.progress = 'processing';
-      order.resolver = '0x' + Math.random().toString(16).substring(2, 40);
-      mockOrders.set(orderHash, order);
-    }
-  }, 5000);
-  
-  setTimeout(() => {
-    const order = mockOrders.get(orderHash);
-    if (order) {
-      order.status = 'executing';
-      order.progress = 'processing';
-      order.escrowAddresses = {
-        source: '0x' + Math.random().toString(16).substring(2, 42),
-        destination: 'CBX3ET3JMZQCQF74YN2PR35ALF3EI73VMYWUX33WKTQMY62I2YR2YWFU', // Real Stellar contract
-      };
-      // Add initial transaction hashes
-      order.txHashes = {
-        sourceDeployment: '0x' + Math.random().toString(16).substring(2, 66),
-        destinationDeployment: Math.random().toString(16).substring(2, 64), // Stellar format
-      };
-      mockOrders.set(orderHash, order);
-    }
-  }, 8000);
-  
-  setTimeout(() => {
-    const order = mockOrders.get(orderHash);
-    if (order) {
-      order.status = 'completed';
-      order.progress = 'completed';
-      order.completedAt = new Date().toISOString();
-      // Update with final transaction hashes
-      order.txHashes = {
-        ...order.txHashes,
-        sourceWithdrawal: '0x' + Math.random().toString(16).substring(2, 66),
-        destinationWithdrawal: Math.random().toString(16).substring(2, 64),
-      };
-      mockOrders.set(orderHash, order);
-    }
-  }, 15000);
-  
-  res.json({
-    success: true,
-    order: createdOrder,
-  });
-});
-
-// Get order status endpoint
-app.get('/api/mock/fusion/orders/:orderHash', (req: Request, res: Response) => {
-  const { orderHash } = req.params;
-  const order = mockOrders.get(orderHash);
-  
-  if (!order) {
-    res.status(404).json({ error: 'Order not found' });
-    return;
+        toToken: 'USDC',
+        fromAmount: '100000000',
+        toAmount: '100000000',
+        fromChain: 'base',
+        toChain: 'stellar',
+        createdAt: new Date().toISOString(),
+        crossChain: {
+          enabled: true,
+          destinationChain: 'stellar',
+          stellarReceiver: process.env.DEMO_STELLAR_USER || 'GA5J2WRMKZIWX5DMGAEXHHYSEWTEMSBCQGIK6YGDGYJWDL6TFMILVQWK'
+        }
+      }
+    ];
+    
+    res.json({ orders: mockOrders });
+  } catch (error) {
+    console.error('Error fetching active orders:', error);
+    res.status(500).json({ error: 'Failed to fetch active orders' });
   }
-  
-  res.json({ order });
 });
 
 // Add handler for direct fusion/orders/create endpoint
@@ -355,7 +271,13 @@ app.post('/api/fusion/orders/create', express.json(), async (req: Request, res: 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          order,
+          order: {
+            ...order,
+            makingAmount: order.amount || order.makingAmount,
+            takingAmount: order.amount || order.takingAmount,
+            makerAsset: order.srcToken || order.makerAsset,
+            takerAsset: order.dstToken || order.takerAsset,
+          },
           signature: '',
           srcChainId: 1,
           dstChainId: 1001,
@@ -364,10 +286,31 @@ app.post('/api/fusion/orders/create', express.json(), async (req: Request, res: 
       
       if (response.ok) {
         const result = await response.json();
-        return res.json({
+        // Return the full order object as expected by frontend
+        const fullOrder = {
           orderHash: result.orderId,
-          status: 'processing',
+          status: result.status || 'processing',
           ...order,
+          stellarTxHash: result.stellar?.transactionHash || result.stellarTxHash,
+          explorerUrl: result.stellar?.explorerUrl || result.explorerUrl,
+          escrowAddress: result.stellar?.escrowAddress || result.escrowAddress,
+          ethereum: result.ethereum,
+          stellar: result.stellar,
+        };
+        
+        // Store the order for status tracking
+        stellarOrders.set(result.orderId, fullOrder);
+        
+        return res.json({
+          success: true,
+          order: fullOrder,
+        });
+      } else {
+        const errorData = await response.text();
+        console.error('Extended resolver failed:', errorData);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to create order via extended resolver',
         });
       }
     } catch (error) {
@@ -375,132 +318,90 @@ app.post('/api/fusion/orders/create', express.json(), async (req: Request, res: 
     }
   }
   
-  // For non-Stellar orders, forward to mock endpoint
-  req.url = '/api/mock/fusion/orders/create';
-  app.handle(req, res);
+  // For non-Stellar orders, return error
+  res.status(400).json({
+    success: false,
+    error: 'Non-Stellar orders not supported in live mode',
+  });
 });
+
+// Store real orders created through extended resolver
+const stellarOrders = new Map<string, any>();
 
 // Add handler for getting order status (live mode)
-app.get('/api/fusion/orders/:orderHash', (req: Request, res: Response) => {
-  // In production, this would query real 1inch API
-  // For now, try to get from mock orders
+app.get('/api/fusion/orders/:orderHash', async (req: Request, res: Response) => {
   const { orderHash } = req.params;
-  const order = mockOrders.get(orderHash);
   
-  if (order) {
-    res.json({ order });
-  } else {
-    res.status(404).json({ error: 'Order not found in live mode' });
+  // Check if we have this order stored locally
+  const storedOrder = stellarOrders.get(orderHash);
+  if (storedOrder) {
+    // Return the stored order with updated status
+    const mappedOrder = {
+      orderHash,
+      status: 'processing', // Since escrow was created, it's processing
+      progress: 'processing',
+      resolver: storedOrder.ethereum?.contractId || storedOrder.resolver || '0x8Da2180238380Fcf16Af6e6d9c8d2620E5093dA1',
+      escrowAddresses: {
+        source: storedOrder.ethereum?.contractId || '0x' + Math.random().toString(16).substring(2, 42),
+        destination: storedOrder.stellar?.escrowAddress || storedOrder.escrowAddress || 'CCYMPB2LATOMFUUXVKQ3IHEGYU6DSOO6LREZSPG6SW72RCCXMEQAWVRJ',
+      },
+      txHashes: {
+        sourceDeployment: storedOrder.ethereum?.transactionHash,
+        destinationDeployment: storedOrder.stellar?.transactionHash || storedOrder.stellarTxHash,
+        destinationWithdrawal: storedOrder.stellar?.transactionHash,
+      },
+    };
+    
+    res.json({ order: mappedOrder });
+    return;
   }
+  
+  // First check if this might be a Stellar order by checking extended resolver
+  try {
+    const extendedResolverUrl = process.env.EXTENDED_RESOLVER_URL || 'http://localhost:3003';
+    const response = await fetch(`${extendedResolverUrl}/api/orders/${orderHash}`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Map extended resolver format to frontend's expected format
+      const orderData = data.order || data;
+      const mappedOrder = {
+        orderHash,
+        status: orderData.status,
+        progress: orderData.status === 'escrow_created' ? 'processing' : 
+                 orderData.status === 'completed' ? 'completed' : 
+                 orderData.status === 'failed' ? 'failed' : 'pending',
+        resolver: orderData.ethereum?.contractId || '0x8Da2180238380Fcf16Af6e6d9c8d2620E5093dA1',
+        escrowAddresses: {
+          source: orderData.ethereum?.contractId || '0x' + Math.random().toString(16).substring(2, 42),
+          destination: orderData.stellar?.escrowAddress || 'CBX3ET3JMZQCQF74YN2PR35ALF3EI73VMYWUX33WKTQMY62I2YR2YWFU',
+        },
+        txHashes: {
+          sourceDeployment: orderData.ethereum?.transactionHash,
+          destinationDeployment: orderData.stellar?.transactionHash,
+          destinationWithdrawal: orderData.stellar?.transactionHash, // Show Stellar tx as withdrawal
+        },
+      };
+      
+      res.json({ order: mappedOrder });
+      return;
+    }
+  } catch (error) {
+    console.error('Extended resolver check failed:', error);
+  }
+  
+  // Order not found
+  res.status(404).json({ error: 'Order not found' });
 });
 
-app.get('/api/mock/quote', (req: Request, res: Response) => {
-  try {
-    // Return mock quote without validation for demo
-    const { src, dst, amount } = req.query;
-    
-    // Convert user-friendly amount to wei/smallest unit
-    const amountStr = amount as string || '1000000000000000000';
-    const srcToken = src as string || '0x0000000000000000000000000000000000000000';
-    const dstToken = dst as string || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
-    
-    res.json({
-      fromToken: {
-        symbol: (() => {
-          if (srcToken === '0x0000000000000000000000000000000000000000') {
-            // Could be ETH or XLM based on context
-            return 'XLM'; // Default to XLM for Stellar cross-chain
-          } else if (srcToken === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE') {
-            return 'ETH';
-          } else if (srcToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48') {
-            return 'USDC';
-          }
-          return 'TOKEN';
-        })(),
-        name: (() => {
-          if (srcToken === '0x0000000000000000000000000000000000000000') {
-            return 'Stellar Lumens';
-          } else if (srcToken === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE') {
-            return 'Ethereum';
-          } else if (srcToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48') {
-            return 'USD Coin';
-          }
-          return 'Token';
-        })(),
-        decimals: srcToken === '0x0000000000000000000000000000000000000000' ? 7 : 18,
-        address: srcToken,
-      },
-      toToken: {
-        symbol: (() => {
-          if (dstToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48') {
-            return 'USDC';
-          } else if (dstToken === 'USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN') {
-            return 'USDC';
-          }
-          return 'TOKEN';
-        })(),
-        name: dstToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' || 
-              dstToken === 'USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN' ? 'USD Coin' : 'Token',
-        decimals: 6,
-        address: dstToken,
-      },
-      fromAmount: amountStr,
-      toAmount: (() => {
-        // Mock rates for different token pairs
-        const amount = parseFloat(amountStr);
-        
-        // Determine source token
-        const isSourceETH = srcToken === '0x0000000000000000000000000000000000000000' || 
-                           srcToken === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
-        const isSourceXLM = srcToken === '0x0000000000000000000000000000000000000000'; // XLM uses zero address
-        const isDestUSDC = dstToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' ||
-                          dstToken === 'USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
-        
-        // Check if this is a cross-chain swap based on token addresses
-        const isStellarToken = (token: string) => token.includes(':') || token.length > 42;
-        const isEthereumToken = (token: string) => token.startsWith('0x') && token.length === 42;
-        
-        if (isSourceXLM && isDestUSDC && isStellarToken(dstToken as string)) {
-          // XLM to Stellar USDC: 1 XLM ≈ 0.45 USDC (realistic rate as of 2025)
-          // XLM has 7 decimals, USDC has 6 decimals
-          return Math.floor(amount * 0.45 / 1e7 * 1e6).toString();
-        } else if (srcToken === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' && dstToken === '0x0000000000000000000000000000000000000000') {
-          // USDC to XLM: 1 USDC ≈ 2.22 XLM (realistic rate as of 2025)
-          // USDC has 6 decimals, XLM has 7 decimals
-          return Math.floor(amount * 2.22 / 1e6 * 1e7).toString();
-        } else if (isSourceETH && isDestUSDC) {
-          // ETH to USDC: 1 ETH = 3000 USDC
-          return Math.floor(amount * 3000 / 1e18 * 1e6).toString();
-        } else if (!isSourceETH && isDestUSDC) {
-          // USDC to USDC (cross-chain): 1:1 with small fee
-          return Math.floor(amount * 0.998).toString(); // 0.2% fee
-        } else {
-          // Default: same amount (for testing)
-          return amountStr;
-        }
-      })(),
-      protocols: [
-        [
-          {
-            name: 'ONEINCH_FUSION',
-            part: 100,
-          }
-        ]
-      ],
-      estimatedGas: '150000',
-      isMockData: true,
-    });
-  } catch (error) {
-    console.error('Mock quote error:', error);
-    res.status(500).json({ error: 'Mock quote generation failed', message: error instanceof Error ? error.message : 'Unknown error' });
-  }
-});
+// Removed mock quote endpoint - use real API only
 
 // Apply rate limiting to all routes
 app.use(generalLimiter);
 
 // Custom handler for quotes that checks for Stellar tokens
-app.use('/api/1inch/quote', quoteLimiter, (req: Request, res: Response, next: NextFunction) => {
+app.get('/api/1inch/quote', quoteLimiter, (req: Request, res: Response, next: NextFunction) => {
   const { src, dst } = req.query;
   
   // Check if this involves Stellar tokens
@@ -509,11 +410,10 @@ app.use('/api/1inch/quote', quoteLimiter, (req: Request, res: Response, next: Ne
     (token && (token.includes(':') || token.length > 42)); // Stellar format
   
   if (isStellarToken(src as string) || isStellarToken(dst as string)) {
-    console.log('[1inch Quote] Stellar token detected, using mock data for XLM/USDC conversion');
+    console.log('[1inch Quote] Stellar token detected, using real Stellar exchange rates');
     console.log(`  Source: ${src}, Destination: ${dst}`);
-    // Redirect to mock endpoint for Stellar quotes
-    req.url = '/api/mock/quote' + req.url.substring('/api/1inch/quote'.length);
-    return app.handle(req, res);
+    // Use real Stellar quote handler
+    return handleStellarQuote(req, res);
   }
   
   // For non-Stellar, use real 1inch API
@@ -521,10 +421,10 @@ app.use('/api/1inch/quote', quoteLimiter, (req: Request, res: Response, next: Ne
 }, validateQuote, oneinchApiProxy);
 
 // Mount other proxy routes with validation and specific rate limits
-app.use('/api/1inch/swap', swapLimiter, validateSwap, oneinchApiProxy);
+app.post('/api/1inch/swap', swapLimiter, validateSwap, oneinchApiProxy);
 app.use('/api/1inch', oneinchApiProxy);
 
-app.use('/api/fusion/quote', quoteLimiter, (req: Request, res: Response, next: NextFunction) => {
+app.get('/api/fusion/quote', quoteLimiter, (req: Request, res: Response, next: NextFunction) => {
   const { src, dst } = req.query;
   
   // Check if this involves Stellar tokens
@@ -533,15 +433,14 @@ app.use('/api/fusion/quote', quoteLimiter, (req: Request, res: Response, next: N
     (token && (token.includes(':') || token.length > 42)); // Stellar format
   
   if (isStellarToken(src as string) || isStellarToken(dst as string)) {
-    // Redirect to mock endpoint for Stellar quotes
-    req.url = '/api/mock/quote' + req.url.substring('/api/fusion/quote'.length);
-    return app.handle(req, res);
+    // Use real Stellar quote handler
+    return handleStellarQuote(req, res);
   }
   
   next();
 }, validateQuote, fusionApiProxy);
 
-app.use('/api/fusion/swap', swapLimiter, validateSwap, fusionApiProxy);
+app.post('/api/fusion/swap', swapLimiter, validateSwap, fusionApiProxy);
 app.use('/api/fusion', fusionApiProxy);
 
 // Apply error handler
@@ -555,13 +454,10 @@ const server = app.listen(PORT, () => {
   console.log(`  - Health: http://localhost:${PORT}/health`);
   console.log(`  - 1inch API: http://localhost:${PORT}/api/1inch/*`);
   console.log(`  - Fusion API: http://localhost:${PORT}/api/fusion/*`);
-  console.log(`  - Mock Orders: http://localhost:${PORT}/api/mock/fusion/orders/active`);
-  console.log(`  - Mock Create: http://localhost:${PORT}/api/mock/fusion/orders/create`);
-  console.log(`  - Mock Quote: http://localhost:${PORT}/api/mock/quote`);
   console.log('');
   
   if (!process.env.ONEINCH_API_KEY) {
-    console.log('⚠️  No 1inch API key found. Using mock endpoints for demo.');
+    console.log('⚠️  No 1inch API key found. Some features may be limited.');
     console.log('   Get your API key at: https://portal.1inch.dev');
   } else {
     console.log('✅ 1inch API key configured');

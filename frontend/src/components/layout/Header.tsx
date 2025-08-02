@@ -4,7 +4,8 @@ import React from 'react';
 import { useWallets } from '@/contexts/WalletContext';
 import { Button } from '@/components/ui/button';
 import { Wallet } from 'lucide-react';
-import { EthereumLogo, StellarLogo } from '@/components/icons/ChainLogos';
+import { StellarLogo } from '@/components/icons/ChainLogos';
+import Image from 'next/image';
 
 export const Header: React.FC = () => {
   const { 
@@ -38,7 +39,7 @@ export const Header: React.FC = () => {
                 {/* Desktop view */}
                 <div className="hidden sm:flex items-center space-x-2 text-sm">
                   <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-neutral-800/50">
-                    <EthereumLogo className="w-4 h-4" />
+                    <Image src="/base-light.svg" alt="Base" width={16} height={16} />
                     <span className="font-mono text-xs text-neutral-300">{formatAddress(metamask.address)}</span>
                   </div>
                   <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-neutral-800/50">

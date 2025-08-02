@@ -6,9 +6,9 @@ import { ERC20_ABI } from '@/lib/abi/erc20';
 import { TOKEN_ADDRESSES } from '@/services/api';
 
 interface Balances {
-  ethereum: string;
+  base: string;
   stellar: string;
-  ethereumUSDC: string;
+  baseUSDC: string;
   stellarUSDC: string;
   loading: boolean;
   error: string | null;
@@ -17,9 +17,9 @@ interface Balances {
 export function useBalances() {
   const { metamask, freighter } = useWallets();
   const [balances, setBalances] = useState<Balances>({
-    ethereum: '0',
+    base: '0',
     stellar: '0',
-    ethereumUSDC: '0',
+    baseUSDC: '0',
     stellarUSDC: '0',
     loading: false,
     error: null
@@ -29,7 +29,7 @@ export function useBalances() {
   const debouncedMetamaskConnected = useDebounce(metamask.isConnected, 500);
   const debouncedFreighterConnected = useDebounce(freighter.isConnected, 500);
 
-  const fetchEthereumBalance = useCallback(async () => {
+  const fetchBaseBalance = useCallback(async () => {
     if (!metamask.isConnected || !metamask.provider || !metamask.address) {
       return '0';
     }
@@ -43,19 +43,41 @@ export function useBalances() {
     }
   }, [metamask.isConnected, metamask.provider, metamask.address]);
 
-  const fetchEthereumUSDCBalance = useCallback(async () => {
+  const fetchBaseUSDCBalance = useCallback(async () => {
     if (!metamask.isConnected || !metamask.provider || !metamask.address) {
       return '0';
     }
 
     try {
+      // Check network
+      const network = await metamask.provider.getNetwork();
+      const chainId = Number(network.chainId);
+      console.log('Current network chainId:', chainId, 'Expected Base:', 8453);
+      
+      // If not on Base, return 0
+      if (chainId !== 8453) {
+        console.warn('Not on Base network. Please switch to Base mainnet (chainId: 8453)');
+        return '0';
+      }
+      
       const usdcContract = new ethers.Contract(
-        TOKEN_ADDRESSES.ethereum.USDC,
+        TOKEN_ADDRESSES.base.USDC,
         ERC20_ABI,
         metamask.provider
       );
+      console.log('Fetching USDC balance for:', metamask.address, 'Contract:', TOKEN_ADDRESSES.base.USDC);
+      
+      // First check if contract exists
+      const code = await metamask.provider.getCode(TOKEN_ADDRESSES.base.USDC);
+      if (code === '0x') {
+        console.error('USDC contract not found at address:', TOKEN_ADDRESSES.base.USDC);
+        return '0';
+      }
+      
       const balance = await usdcContract.balanceOf(metamask.address);
-      return ethers.formatUnits(balance, 6); // USDC has 6 decimals
+      const formattedBalance = ethers.formatUnits(balance, 6); // USDC has 6 decimals
+      console.log('USDC balance:', formattedBalance);
+      return formattedBalance;
     } catch (error) {
       console.error('Error fetching USDC balance:', error);
       return '0';
@@ -77,10 +99,17 @@ export function useBalances() {
       }
 
       const data = await response.json();
-      const xlmBalance = data.balances?.find((b: any) => b.asset_type === 'native')?.balance || '0';
+      interface StellarBalance {
+        asset_type: string;
+        asset_code?: string;
+        asset_issuer?: string;
+        balance: string;
+      }
+      
+      const xlmBalance = data.balances?.find((b: StellarBalance) => b.asset_type === 'native')?.balance || '0';
       
       // Find USDC balance
-      const usdcBalance = data.balances?.find((b: any) => 
+      const usdcBalance = data.balances?.find((b: StellarBalance) => 
         b.asset_type === 'credit_alphanum4' && 
         b.asset_code === 'USDC' &&
         b.asset_issuer === 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN'
@@ -97,15 +126,15 @@ export function useBalances() {
     setBalances(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      const [ethBalance, ethUSDCBalance, stellarBalances] = await Promise.all([
-        debouncedMetamaskConnected ? fetchEthereumBalance() : Promise.resolve('0'),
-        debouncedMetamaskConnected ? fetchEthereumUSDCBalance() : Promise.resolve('0'),
+      const [baseBalance, baseUSDCBalance, stellarBalances] = await Promise.all([
+        debouncedMetamaskConnected ? fetchBaseBalance() : Promise.resolve('0'),
+        debouncedMetamaskConnected ? fetchBaseUSDCBalance() : Promise.resolve('0'),
         debouncedFreighterConnected ? fetchStellarBalance() : Promise.resolve({ xlm: '0', usdc: '0' })
       ]);
 
       setBalances({
-        ethereum: ethBalance,
-        ethereumUSDC: ethUSDCBalance,
+        base: baseBalance,
+        baseUSDC: baseUSDCBalance,
         stellar: stellarBalances.xlm,
         stellarUSDC: stellarBalances.usdc,
         loading: false,
@@ -118,7 +147,7 @@ export function useBalances() {
         error: error instanceof Error ? error.message : 'Failed to fetch balances'
       }));
     }
-  }, [debouncedMetamaskConnected, debouncedFreighterConnected, fetchEthereumBalance, fetchEthereumUSDCBalance, fetchStellarBalance]);
+  }, [debouncedMetamaskConnected, debouncedFreighterConnected, fetchBaseBalance, fetchBaseUSDCBalance, fetchStellarBalance]);
 
   // Refresh balances when wallet connections change (debounced)
   useEffect(() => {
