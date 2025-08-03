@@ -128,18 +128,47 @@ async function processOrder(
     // Update status
     updateOrderStatus(orderId, 'processing');
     
-    // Check if this is a Stellar cross-chain order
-    if (dstChainId === STELLAR_CHAIN_ID || order.crossChain?.destinationChain === 'stellar') {
-      // Use mainnet HTLC handler for Stellar orders
+    // Check if this is a Stellar cross-chain order (either direction)
+    const hasStellarAsset = 
+      (order.makerAsset && order.makerAsset.includes(':')) ||
+      (order.takerAsset && order.takerAsset.includes(':'));
+    
+    const isStellarDestination = dstChainId === STELLAR_CHAIN_ID || order.crossChain?.destinationChain === 'stellar';
+    const isStellarSource = srcChainId === STELLAR_CHAIN_ID || hasStellarAsset;
+    
+    if (isStellarDestination || isStellarSource) {
+      // Determine direction and parameters
+      const isFromStellar = isStellarSource && !isStellarDestination;
+      
+      // Extract Stellar address from asset format "TOKEN:ADDRESS"
+      let stellarAddress = order.crossChain?.stellarReceiver;
+      if (isFromStellar && order.makerAsset?.includes(':')) {
+        // Extract Stellar address from makerAsset
+        stellarAddress = order.makerAsset.split(':')[1];
+      }
+      
+      // IMPORTANT: MainnetHTLCHandler only supports Base -> Stellar
+      // For Stellar -> Base, we need to handle it differently
+      if (isFromStellar) {
+        // TODO: Implement Stellar -> Base swap logic
+        console.error('Stellar -> Base swaps not yet implemented in MainnetHTLCHandler');
+        updateOrderStatus(orderId, 'failed', {
+          error: 'Stellar to Base swaps are not yet supported. Please swap from Base to Stellar instead.',
+          suggestion: 'Reverse your swap direction in the UI'
+        });
+        return;
+      }
+      
+      // Use mainnet HTLC handler for Base -> Stellar orders
       const result = await mainnetHandler.handleCrossChainOrder({
         orderId,
         srcChain: srcChainId === 8453 ? 'base' : 'ethereum',
         dstChain: 'stellar',
-        maker: order.maker,
+        maker: order.maker, // Base address
         taker: order.taker || process.env.DEMO_STELLAR_RESOLVER!,
         amount: order.makingAmount || order.amount,
-        token: 'USDC', // Determine from order.makerAsset
-        stellarReceiver: order.crossChain?.stellarReceiver || process.env.DEMO_STELLAR_USER!,
+        token: 'USDC',
+        stellarReceiver: stellarAddress || order.crossChain?.stellarReceiver || process.env.DEMO_STELLAR_USER!,
       });
       
       if (result.success) {

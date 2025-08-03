@@ -22,10 +22,11 @@ export class SecretManager {
     const secret = ethers.hexlify(bytes);
     const hash = ethers.keccak256(secret);
     
-    console.log('🔑 NEW SECRET', secret); // Console breadcrumb for debugging
+    // Log hash only, never log the actual secret in production
+    logger.debug(`Generated new secret with hash: ${hash}`);
     
     // Store secret with hash as key for retrieval
-    await this.persistentStore.set(`secret:${hash}`, secret);
+    this.persistentStore.set(`secret:${hash}`, secret);
     
     return { secret, hash };
   }

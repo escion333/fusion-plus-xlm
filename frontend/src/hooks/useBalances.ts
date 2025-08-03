@@ -5,6 +5,8 @@ import { useDebounce } from './useDebounce';
 import { ERC20_ABI } from '@/lib/abi/erc20';
 import { TOKEN_ADDRESSES } from '@/services/api';
 
+const IS_MOCK_MODE = process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
+
 interface Balances {
   base: string;
   stellar: string;
@@ -124,6 +126,21 @@ export function useBalances() {
 
   const fetchBalances = useCallback(async () => {
     setBalances(prev => ({ ...prev, loading: true, error: null }));
+
+    if (IS_MOCK_MODE) {
+      // Provide mock balances for demo
+      setTimeout(() => {
+        setBalances({
+          base: '1.5',              // 1.5 ETH
+          baseUSDC: '5000.00',      // 5000 USDC on Base
+          stellar: '10000.00',      // 10000 XLM
+          stellarUSDC: '3000.00',   // 3000 USDC on Stellar
+          loading: false,
+          error: null
+        });
+      }, 500);
+      return;
+    }
 
     try {
       const [baseBalance, baseUSDCBalance, stellarBalances] = await Promise.all([

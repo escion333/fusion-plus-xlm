@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fusion+ Cross-Chain Swap</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .swap-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .swap-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .input-group input, .input-group select {
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .swap-direction {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+
+        .chain-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            flex: 1;
+            border: 2px solid #e1e5e9;
+        }
+
+        .chain-name {
+            font-weight: 600;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .chain-token {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .arrow {
+            margin: 0 20px;
+            font-size: 24px;
+            color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .status-value {
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        .success {
+            color: #28a745;
+        }
+
+        .pending {
+            color: #ffc107;
+        }
+
+        .error {
+            color: #dc3545;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .services-status {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .service-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .service-name {
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-dot.online {
+            background: #28a745;
+        }
+
+        .status-dot.offline {
+            background: #dc3545;
+        }
+
+        .history-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .swap-item {
+            padding: 15px;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .swap-amount {
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .swap-time {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌟 Fusion+ Cross-Chain Swap</h1>
+            <p>Seamless atomic swaps between Base and Stellar</p>
+        </div>
+
+        <!-- Services Status -->
+        <div class="services-status">
+            <div class="service-card">
+                <div class="service-name">🚀 Relayer Service</div>
+                <div class="service-status">
+                    <div class="status-dot" id="relayer-status"></div>
+                    <span id="relayer-text">Checking...</span>
+                </div>
+            </div>
+            <div class="service-card">
+                <div class="service-name">🔧 Resolver Service</div>
+                <div class="service-status">
+                    <div class="status-dot" id="resolver-status"></div>
+                    <span id="resolver-text">Checking...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Swap Interface -->
+        <div class="swap-card">
+            <h2 style="margin-bottom: 30px; text-align: center;">Create Cross-Chain Swap</h2>
+            
+            <div class="swap-form">
+                <div class="input-group">
+                    <label for="amount">Amount</label>
+                    <input type="number" id="amount" placeholder="0.001" step="0.001" min="0.001" max="1.0">
+                </div>
+
+                <div class="swap-direction">
+                    <div class="chain-box">
+                        <div class="chain-name">Base</div>
+                        <div class="chain-token">ETH</div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="chain-box">
+                        <div class="chain-name">Stellar</div>
+                        <div class="chain-token">XLM</div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="stellar-address">Stellar Receiving Address</label>
+                    <input type="text" id="stellar-address" placeholder="GDIY6AQQ75WMD4W46EYB7O6UYMHOCGQHLAQGQTKHDX4J2DYQCHVCR4W4" value="GDIY6AQQ75WMD4W46EYB7O6UYMHOCGQHLAQGQTKHDX4J2DYQCHVCR4W4">
+                </div>
+
+                <button class="btn" id="connect-wallet" onclick="connectWallet()">
+                    Connect Wallet
+                </button>
+
+                <button class="btn" id="create-swap" onclick="createSwap()" disabled>
+                    Create Swap
+                </button>
+            </div>
+        </div>
+
+        <!-- Current Swap Status -->
+        <div class="status-card" id="swap-status" style="display: none;">
+            <h3 style="margin-bottom: 20px;">🔄 Swap Status</h3>
+            <div id="status-content">
+                <!-- Status items will be populated here -->
+            </div>
+        </div>
+
+        <!-- Swap History -->
+        <div class="history-card">
+            <h3 style="margin-bottom: 20px;">📊 Recent Swaps</h3>
+            <div id="swap-history">
+                <p style="color: #666; text-align: center;">No swaps yet. Create your first cross-chain swap above!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            RELAYER_URL: 'http://localhost:3001',
+            RESOLVER_URL: 'http://localhost:3002',
+            BASE_RPC: 'https://mainnet.base.org',
+            CHAIN_ID: 8453
+        };
+
+        // Global state
+        let provider = null;
+        let signer = null;
+        let userAddress = null;
+        let currentSwap = null;
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkServices();
+            loadSwapHistory();
+            
+            // Check services every 30 seconds
+            setInterval(checkServices, 30000);
+        });
+
+        // Check service status
+        async function checkServices() {
+            try {
+                const relayerResponse = await fetch(`${CONFIG.RELAYER_URL}/health`);
+                const relayerData = await relayerResponse.json();
+                
+                document.getElementById('relayer-status').className = 'status-dot online';
+                document.getElementById('relayer-text').textContent = `Online (${relayerData.intents} intents)`;
+            } catch (error) {
+                document.getElementById('relayer-status').className = 'status-dot offline';
+                document.getElementById('relayer-text').textContent = 'Offline';
+            }
+
+            try {
+                const resolverResponse = await fetch(`${CONFIG.RESOLVER_URL}/health`);
+                const resolverData = await resolverResponse.json();
+                
+                document.getElementById('resolver-status').className = 'status-dot online';
+                document.getElementById('resolver-text').textContent = `Online (${resolverData.activeJobs} jobs)`;
+            } catch (error) {
+                document.getElementById('resolver-status').className = 'status-dot offline';
+                document.getElementById('resolver-text').textContent = 'Offline';
+            }
+        }
+
+        // Connect wallet
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    alert('Please install MetaMask to use this app!');
+                    return;
+                }
+
+                // Request account access
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                
+                // Create provider and signer
+                provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                userAddress = await signer.getAddress();
+
+                // Check network
+                const network = await provider.getNetwork();
+                if (network.chainId !== BigInt(CONFIG.CHAIN_ID)) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: `0x${CONFIG.CHAIN_ID.toString(16)}` }],
+                        });
+                    } catch (switchError) {
+                        alert('Please switch to Base network manually');
+                        return;
+                    }
+                }
+
+                // Update UI
+                document.getElementById('connect-wallet').textContent = `Connected: ${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+                document.getElementById('create-swap').disabled = false;
+
+                console.log('Wallet connected:', userAddress);
+
+            } catch (error) {
+                console.error('Wallet connection failed:', error);
+                alert('Failed to connect wallet: ' + error.message);
+            }
+        }
+
+        // Create swap
+        async function createSwap() {
+            try {
+                if (!signer) {
+                    alert('Please connect your wallet first!');
+                    return;
+                }
+
+                const amount = document.getElementById('amount').value;
+                const stellarAddress = document.getElementById('stellar-address').value;
+
+                if (!amount || parseFloat(amount) < 0.001) {
+                    alert('Please enter a valid amount (minimum 0.001 ETH)');
+                    return;
+                }
+
+                if (!stellarAddress) {
+                    alert('Please enter a Stellar receiving address');
+                    return;
+                }
+
+                // Update UI
+                document.getElementById('create-swap').disabled = true;
+                document.getElementById('create-swap').innerHTML = '<div class="loading"></div> Creating Swap...';
+
+                // Show status card
+                document.getElementById('swap-status').style.display = 'block';
+                updateSwapStatus('Creating cross-chain intent...', 'pending');
+
+                // Create order parameters
+                const orderParams = {
+                    maker: userAddress,
+                    sourceToken: ethers.ZeroAddress, // ETH
+                    destinationToken: '0x0000000000000000000000000000000000000000',
+                    sourceAmount: ethers.parseEther(amount).toString(),
+                    destinationAmount: (parseFloat(amount) * 1000 * 1000000).toString(), // Convert to stroops
+                    sourceChain: 'ethereum',
+                    destinationChain: 'stellar',
+                    stellarReceiver: stellarAddress,
+                    deadline: Math.floor(Date.now() / 1000) + 3600
+                };
+
+                // Create and sign order (simplified)
+                const orderHash = ethers.keccak256(ethers.toUtf8Bytes(JSON.stringify(orderParams) + Date.now()));
+                const signature = await signer.signMessage(orderHash);
+
+                updateSwapStatus('Submitting to relayer network...', 'pending');
+
+                // Submit to relayer
+                const response = await fetch(`${CONFIG.RELAYER_URL}/submit-intent`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        order: orderParams,
+                        signature: signature,
+                        orderHash: orderHash,
+                        stellarReceiver: stellarAddress,
+                        metadata: {
+                            sourceChain: 'base',
+                            destinationChain: 'stellar',
+                            userAddress: userAddress,
+                            timestamp: Date.now()
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                updateSwapStatus('Intent submitted successfully!', 'success');
+                updateSwapStatus('Waiting for resolver to process...', 'pending');
+
+                // Store current swap
+                currentSwap = {
+                    orderHash: orderHash,
+                    amount: amount,
+                    stellarAddress: stellarAddress,
+                    timestamp: Date.now(),
+                    status: 'pending'
+                };
+
+                // Start monitoring
+                monitorSwap(orderHash);
+
+                // Add to history
+                addToHistory(currentSwap);
+
+            } catch (error) {
+                console.error('Swap creation failed:', error);
+                updateSwapStatus(`Error: ${error.message}`, 'error');
+                
+                // Reset button
+                document.getElementById('create-swap').disabled = false;
+                document.getElementById('create-swap').textContent = 'Create Swap';
+            }
+        }
+
+        // Monitor swap progress
+        async function monitorSwap(orderHash) {
+            let attempts = 0;
+            const maxAttempts = 60; // 5 minutes with 5-second intervals
+
+            const monitor = async () => {
+                attempts++;
+                
+                try {
+                    // Check relayer status
+                    const relayerResponse = await fetch(`${CONFIG.RELAYER_URL}/intents/${orderHash}`);
+                    if (relayerResponse.ok) {
+                        const intentData = await relayerResponse.json();
+                        updateSwapStatus(`Relayer status: ${intentData.status}`, intentData.status === 'completed' ? 'success' : 'pending');
+                    }
+
+                    // Check resolver status
+                    const resolverResponse = await fetch(`${CONFIG.RESOLVER_URL}/jobs`);
+                    if (resolverResponse.ok) {
+                        const jobsData = await resolverResponse.json();
+                        const job = jobsData.jobs.find(j => j.orderHash === orderHash);
+                        
+                        if (job) {
+                            updateSwapStatus(`Resolver status: ${job.status}`, job.status === 'completed' ? 'success' : 'pending');
+                            
+                            if (job.baseEscrow) {
+                                updateSwapStatus(`Base escrow: ${job.baseEscrow}`, 'success');
+                            }
+                            
+                            if (job.stellarEscrow) {
+                                updateSwapStatus(`Stellar escrow: ${job.stellarEscrow}`, 'success');
+                            }
+
+                            if (job.status === 'completed') {
+                                updateSwapStatus('🎉 Atomic swap completed successfully!', 'success');
+                                
+                                // Update history
+                                updateHistoryItem(orderHash, 'completed');
+                                
+                                // Reset form
+                                setTimeout(() => {
+                                    document.getElementById('create-swap').disabled = false;
+                                    document.getElementById('create-swap').textContent = 'Create Swap';
+                                }, 2000);
+                                
+                                return; // Stop monitoring
+                            }
+                        }
+                    }
+
+                } catch (error) {
+                    console.error('Monitoring error:', error);
+                }
+
+                // Continue monitoring if not completed and within limits
+                if (attempts < maxAttempts) {
+                    setTimeout(monitor, 5000);
+                } else {
+                    updateSwapStatus('Monitoring timeout - please check manually', 'error');
+                    document.getElementById('create-swap').disabled = false;
+                    document.getElementById('create-swap').textContent = 'Create Swap';
+                }
+            };
+
+            // Start monitoring
+            setTimeout(monitor, 5000);
+        }
+
+        // Update swap status display
+        function updateSwapStatus(message, type) {
+            const statusContent = document.getElementById('status-content');
+            const statusItem = document.createElement('div');
+            statusItem.className = 'status-item';
+            
+            const time = new Date().toLocaleTimeString();
+            statusItem.innerHTML = `
+                <span class="status-label">${time}</span>
+                <span class="status-value ${type}">${message}</span>
+            `;
+            
+            statusContent.appendChild(statusItem);
+            statusContent.scrollTop = statusContent.scrollHeight;
+        }
+
+        // Load swap history from localStorage
+        function loadSwapHistory() {
+            const history = JSON.parse(localStorage.getItem('swapHistory') || '[]');
+            const historyContainer = document.getElementById('swap-history');
+            
+            if (history.length === 0) return;
+
+            historyContainer.innerHTML = '';
+            
+            history.slice(-5).reverse().forEach(swap => {
+                const swapItem = document.createElement('div');
+                swapItem.className = 'swap-item';
+                swapItem.innerHTML = `
+                    <div class="swap-amount">${swap.amount} ETH → ${(parseFloat(swap.amount) * 1000).toFixed(2)} XLM</div>
+                    <div class="swap-time">${new Date(swap.timestamp).toLocaleString()}</div>
+                    <div class="status-value ${swap.status}">${swap.status}</div>
+                `;
+                historyContainer.appendChild(swapItem);
+            });
+        }
+
+        // Add swap to history
+        function addToHistory(swap) {
+            const history = JSON.parse(localStorage.getItem('swapHistory') || '[]');
+            history.push(swap);
+            localStorage.setItem('swapHistory', JSON.stringify(history.slice(-10))); // Keep last 10
+            loadSwapHistory();
+        }
+
+        // Update history item status
+        function updateHistoryItem(orderHash, status) {
+            const history = JSON.parse(localStorage.getItem('swapHistory') || '[]');
+            const swapIndex = history.findIndex(s => s.orderHash === orderHash);
+            if (swapIndex !== -1) {
+                history[swapIndex].status = status;
+                localStorage.setItem('swapHistory', JSON.stringify(history));
+                loadSwapHistory();
+            }
+        }
+    </script>
+</body>
+</html>

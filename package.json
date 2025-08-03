@@ -1,0 +1,33 @@
+{
+  "name": "fusion-plus-xlm",
+  "version": "1.0.0",
+  "description": "Cross-chain USDC swaps between Base and Stellar using 1inch Fusion+ protocol",
+  "private": true,
+  "author": "Fusion+ Team",
+  "license": "MIT",
+  "workspaces": [
+    "frontend",
+    "extended-resolver"
+  ],
+  "scripts": {
+    "install": "npm install --workspaces",
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev --workspace=frontend",
+    "resolver:dev": "npm run dev --workspace=extended-resolver",
+    "proxy:dev": "npm run proxy:dev --workspace=src",
+    "db:start": "docker-compose up -d postgres",
+    "db:stop": "docker-compose down",
+    "clean": "npm run clean --workspaces",
+    "test": "npm run test --workspaces",
+    "demo:factory-swap": "npm run demo:factory-swap --workspace=extended-resolver",
+    "smoke:stellar": "npm run smoke:stellar --workspace=extended-resolver"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

@@ -36,6 +36,11 @@ This project extends the 1inch Fusion+ protocol to enable seamless cross-chain s
 
 ## 🏃 Quick Start
 
+### Prerequisites
+Ensure you have the required tools installed (see Prerequisites section above).
+
+### Installation
+
 1. **Clone the repository**
    ```bash
    git clone https://github.com/yourusername/fusion-plus-xlm.git
@@ -53,36 +58,40 @@ This project extends the 1inch Fusion+ protocol to enable seamless cross-chain s
    # Edit .env with your configuration
    ```
 
-4. **Start the development environment**
-   ```bash
-   # Start the database
-   npm run db:start
+### Running the Application
 
-   # In separate terminals:
-   npm run dev           # Frontend
-   npm run resolver:dev  # Resolver service
-   npm run proxy:dev     # API proxy
-   ```
+#### Option 1: Full Stack (Real Mode)
+```bash
+# Start all services
+npm run db:start         # PostgreSQL database
+npm run resolver:dev     # Resolver service (port 3001)
+npm run proxy:dev        # API proxy (port 3002)
+npm run dev              # Frontend (port 3000)
+```
 
-5. **Access the application**
-   - Frontend: http://localhost:3000
-   - Resolver API: http://localhost:3001
-   - Proxy API: http://localhost:3002
+#### Option 2: Frontend Demo (Mock Mode)
+```bash
+# Run frontend with simulated data
+./scripts/run-frontend-demo.sh
+```
+
+Access the application at http://localhost:3000
 
 ## 📁 Project Structure
 
 ```
 fusion-plus-xlm/
-├── frontend/              # Next.js frontend application
-├── src/                   # Backend services
-│   ├── services/         # Resolver and proxy services
-│   ├── database/         # Data persistence layer
-│   └── config/           # Configuration files
-├── contracts/            # Smart contract interfaces
-├── stellar-fusion/       # Stellar contract implementation
-├── scripts/              # Deployment and demo scripts
-│   └── 1inch/           # 1inch integration demos
-
+├── frontend/             # Next.js frontend application
+├── contracts/            # Ethereum smart contracts
+├── stellar-fusion/       # Stellar HTLC contract
+├── stellar-fusion-factory/  # Stellar factory contract
+├── extended-resolver/    # 1inch Fusion+ resolver extension
+├── src/                  # Backend services
+│   ├── proxy/           # API proxy service
+│   ├── services/        # Core services
+│   └── database/        # Data persistence
+├── scripts/              # Deployment scripts
+└── docs/                 # Documentation
 ```
 
 

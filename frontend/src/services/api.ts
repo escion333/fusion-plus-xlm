@@ -1,7 +1,9 @@
 import { retryQuoteFetch, retryOrderStatus } from '@/utils/retry';
+import { mockFusionAPI } from './mockApi';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_RESOLVER_API_URL || 'http://localhost:3001';
 const PROXY_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+const IS_MOCK_MODE = process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
 
 interface CreateSwapRequest {
   sourceChain: string;
@@ -69,6 +71,11 @@ interface QuoteResponse {
 
 export class FusionAPI {
   static async getActiveOrders(maker?: string): Promise<FusionOrder[]> {
+    if (IS_MOCK_MODE) {
+      const result = await mockFusionAPI.getActiveOrders(maker);
+      return result.orders || [];
+    }
+    
     try {
       const params = maker ? `?maker=${maker}` : '';
       const endpoint = `${PROXY_BASE_URL}/api/fusion/orders/active${params}`;
@@ -101,6 +108,10 @@ export class FusionAPI {
   }
   
   static async createOrder(order: Partial<FusionOrder>): Promise<FusionOrder> {
+    if (IS_MOCK_MODE) {
+      return await mockFusionAPI.createOrder(order);
+    }
+    
     try {
       const endpoint = `${PROXY_BASE_URL}/api/fusion/orders/create`;
         
@@ -151,6 +162,10 @@ export class FusionAPI {
       createdAt?: string;
     }
   }> {
+    if (IS_MOCK_MODE) {
+      return await mockFusionAPI.getOrderStatus(orderHash);
+    }
+    
     return retryOrderStatus(async () => {
       try {
         const endpoint = `${PROXY_BASE_URL}/api/fusion/orders/${orderHash}`;
@@ -188,6 +203,10 @@ export class FusionAPI {
   }
   
   static async getQuote(request: QuoteRequest): Promise<QuoteResponse> {
+    if (IS_MOCK_MODE) {
+      return await mockFusionAPI.getQuote(request);
+    }
+    
     return retryQuoteFetch(async () => {
       try {
         const params = new URLSearchParams({

@@ -35,7 +35,12 @@ class BaseHTLCHandler {
         this.provider = new ethers_1.ethers.JsonRpcProvider(rpcUrl);
         // Use resolver's private key
         const privateKey = process.env.RESOLVER_PRIVATE_KEY;
-        this.wallet = new ethers_1.ethers.Wallet(privateKey, this.provider);
+        if (!privateKey) {
+            throw new Error('RESOLVER_PRIVATE_KEY not set in environment');
+        }
+        // Ensure private key has 0x prefix
+        const formattedKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
+        this.wallet = new ethers_1.ethers.Wallet(formattedKey, this.provider);
         // Initialize escrow factory
         this.factoryAddress = process.env.BASE_ESCROW_FACTORY || '0xe7e9E1B7D4BE66D596D8f599c892ffdfFD8dD866';
         this.escrowFactory = new ethers_1.ethers.Contract(this.factoryAddress, ESCROW_FACTORY_ABI, this.wallet);

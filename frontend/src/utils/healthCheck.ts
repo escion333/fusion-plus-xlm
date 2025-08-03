@@ -1,3 +1,5 @@
+import { mockHealthCheck } from '@/services/mockApi';
+
 export interface ServiceHealth {
   name: string;
   url: string;
@@ -14,6 +16,7 @@ export interface HealthCheckResult {
 
 const RESOLVER_URL = process.env.NEXT_PUBLIC_RESOLVER_API_URL || 'http://localhost:3001';
 const PROXY_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+const IS_MOCK_MODE = process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
 
 async function checkService(url: string, endpoint: string): Promise<boolean> {
   try {
@@ -33,6 +36,25 @@ async function checkService(url: string, endpoint: string): Promise<boolean> {
 }
 
 export async function checkServicesHealth(): Promise<HealthCheckResult> {
+  if (IS_MOCK_MODE) {
+    const mockResult = await mockHealthCheck();
+    return {
+      resolver: {
+        name: 'Resolver Service (Mock)',
+        url: RESOLVER_URL,
+        status: mockResult.resolver.status,
+        lastChecked: new Date()
+      },
+      proxy: {
+        name: 'API Proxy (Mock)',
+        url: PROXY_URL,
+        status: mockResult.proxy.status,
+        lastChecked: new Date()
+      },
+      overall: mockResult.overall
+    };
+  }
+
   const results: HealthCheckResult = {
     resolver: {
       name: 'Resolver Service',

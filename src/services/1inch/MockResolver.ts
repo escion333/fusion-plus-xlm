@@ -28,6 +28,7 @@ interface ResolverBid {
 }
 
 export class MockResolver {
+  private isDevelopment = process.env.NODE_ENV === 'development';
   private provider: ethers.Provider;
   private signer: ethers.Signer;
   private orders: Map<string, MockOrder> = new Map();
@@ -43,6 +44,10 @@ export class MockResolver {
    * Monitor orders and participate in Dutch auctions
    */
   async monitorOrders(): Promise<void> {
+    if (!this.isDevelopment) {
+      console.warn('MockResolver should not be used in production');
+      return;
+    }
     console.log('🔍 Mock Resolver: Starting order monitoring...');
     
     // Simulate monitoring loop
@@ -277,6 +282,10 @@ export class MockResolver {
    * Add a mock order to monitor
    */
   addOrder(order: MockOrder): void {
+    if (!this.isDevelopment) {
+      console.warn('MockResolver should not be used in production');
+      return;
+    }
     this.orders.set(order.orderHash, order);
     console.log(`📝 Added order ${order.orderHash} to monitoring`);
   }

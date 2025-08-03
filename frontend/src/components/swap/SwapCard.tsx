@@ -27,7 +27,7 @@ export function SwapCard() {
   const [swapState, setSwapState] = useState<'idle' | 'creating' | 'pending' | 'processing' | 'completed' | 'failed'>('idle');
   const [orderHash, setOrderHash] = useState<string | null>(null);
   const [orderDetails, setOrderDetails] = useState<any>(null);
-  const isMockMode = false; // Always live mode
+  const isMockMode = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
 
   const { isFullyConnected } = useWallets();
   const { createFusionOrder, getQuote, isLoading, error, currentSwapId, swapStatus, quote } = useSwap();
@@ -67,36 +67,45 @@ export function SwapCard() {
           try {
             const result = await FusionAPI.getOrderStatus(order.orderHash);
             
+            // Handle different response formats - result might be { order: ... } or just the order data
+            const orderData: any = result.order || result;
+            
+            // Safety check - make sure we have order data
+            if (!orderData || typeof orderData !== 'object') {
+              console.warn('Invalid order data received:', result);
+              return;
+            }
+            
             // Update swap state based on order status
-            if (result.order.status === 'pending') {
+            if (orderData.status === 'pending') {
               setSwapState('pending');
-            } else if (result.order.status === 'processing' || result.order.status === 'escrow_created') {
+            } else if (orderData.status === 'processing' || orderData.status === 'escrow_created') {
               setSwapState('processing');
-            } else if (result.order.status === 'completed') {
+            } else if (orderData.status === 'completed') {
               setSwapState('completed');
               clearInterval(pollInterval);
               refreshBalances();
               // Set order details including secret
               setOrderDetails({
-                resolver: result.order.resolver,
-                secret: result.order.secret,
-                escrowAddresses: result.order.escrowAddresses,
-                txHashes: result.order.txHashes
+                resolver: orderData.resolver,
+                secret: orderData.secret,
+                escrowAddresses: orderData.escrowAddresses,
+                txHashes: orderData.txHashes
               });
               // Don't auto-reset - wait for user to close
-            } else if (result.order.status === 'failed' || result.order.status === 'cancelled') {
+            } else if (orderData.status === 'failed' || orderData.status === 'cancelled') {
               setSwapState('failed');
               clearInterval(pollInterval);
               // Don't auto-reset - wait for user to close
             }
             
             // Update order details for progress tracking
-            if (result.order.escrowAddresses || result.order.txHashes) {
+            if (orderData.escrowAddresses || orderData.txHashes) {
               setOrderDetails({
-                resolver: result.order.resolver,
-                secret: result.order.secret,
-                escrowAddresses: result.order.escrowAddresses,
-                txHashes: result.order.txHashes
+                resolver: orderData.resolver,
+                secret: orderData.secret,
+                escrowAddresses: orderData.escrowAddresses,
+                txHashes: orderData.txHashes
               });
             }
           } catch (error) {

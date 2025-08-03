@@ -4,6 +4,15 @@ import { CheckCircle2, Clock, Loader2, XCircle, X, ExternalLink, Copy } from 'lu
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
+interface PartialFill {
+  index: number;
+  amount: string;
+  percentage: number;
+  txHash?: string;
+  status: 'pending' | 'completed';
+  timestamp?: number;
+}
+
 interface SwapProgressProps {
   status: 'creating' | 'pending' | 'processing' | 'completed' | 'failed';
   orderHash?: string;
@@ -12,6 +21,8 @@ interface SwapProgressProps {
   orderDetails?: {
     resolver?: string;
     secret?: string; // Add secret to order details
+    partialFills?: PartialFill[];
+    totalFills?: number;
     escrowAddresses?: {
       source: string;
       destination: string;
@@ -74,7 +85,7 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
   const { toast } = useToast();
   // Dynamic time estimates based on step and mode
   const getEstimatedTime = () => {
-    if (isMockMode) return 30; // Mock mode is faster
+    if (process.env.NODE_ENV === 'development' && isMockMode) return 30; // Mock mode is faster
     
     switch (currentStep) {
       case 0: return 15;  // Creating order
@@ -381,6 +392,62 @@ export function SwapProgress({ status, orderHash, estimatedTime = 120, error, or
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Partial Fills Progress */}
+        {orderDetails?.partialFills && orderDetails.partialFills.length > 0 && (
+          <div className="bg-neutral-800/50 rounded-lg p-3 mb-4">
+            <div className="text-xs text-neutral-400 mb-2">Partial Fills Progress</div>
+            
+            {/* Overall Progress Bar */}
+            <div className="mb-3">
+              <div className="flex justify-between text-xs text-neutral-300 mb-1">
+                <span>Total Progress</span>
+                <span>{Math.round(orderDetails.partialFills.reduce((sum, fill) => sum + (fill.status === 'completed' ? fill.percentage : 0), 0))}%</span>
+              </div>
+              <div className="w-full bg-neutral-700 rounded-full h-2">
+                <div 
+                  className="bg-brand-primary h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${orderDetails.partialFills.reduce((sum, fill) => sum + (fill.status === 'completed' ? fill.percentage : 0), 0)}%` }}
+                  aria-valuenow={orderDetails.partialFills.reduce((sum, fill) => sum + (fill.status === 'completed' ? fill.percentage : 0), 0)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
+              </div>
+            </div>
+            
+            {/* Individual Fills */}
+            <div className="space-y-2">
+              {orderDetails.partialFills.map((fill, index) => (
+                <div key={index} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-neutral-400">Fill #{fill.index}</span>
+                    <span className="text-neutral-300">{fill.amount}</span>
+                    <span className="text-neutral-500">({fill.percentage}%)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {fill.status === 'completed' ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3 text-green-500" />
+                        {fill.txHash && (
+                          <a
+                            href={`https://etherscan.io/tx/${fill.txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-neutral-400 hover:text-neutral-200"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <Loader2 className="w-3 h-3 text-neutral-400 animate-spin" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

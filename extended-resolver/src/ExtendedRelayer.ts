@@ -6,7 +6,9 @@ import { EventEmitter } from 'events';
 // Mock of the 1inch MockRelayer - in real implementation, we'd import this
 class MockRelayer {
     async handleOrder(order: any) {
-        logger.info('Base MockRelayer handling order', order);
+        if (process.env.NODE_ENV === 'development') {
+            logger.info('Base MockRelayer handling order', order);
+        }
         // Base implementation handles Ethereum <-> BSC
     }
 }

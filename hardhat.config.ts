@@ -37,6 +37,11 @@ const config: HardhatUserConfig = {
       accounts: process.env.BASE_PRIVATE_KEY ? [process.env.BASE_PRIVATE_KEY] : [],
       chainId: 8453,
     },
+    "base-sepolia": {
+      url: "https://sepolia.base.org",
+      accounts: process.env.TEST_PRIVATE_KEY ? [process.env.TEST_PRIVATE_KEY] : [],
+      chainId: 84532,
+    },
   },
   paths: {
     sources: "./contracts",

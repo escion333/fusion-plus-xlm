@@ -65,7 +65,9 @@ Thumbs.db
 *.local.json
 
 # Documentation (internal use only)
-docs/
+docs/internal-docs/
+docs/planning/
+docs/ai-plans/
 
 # Local scripts
 scripts/test-*.js
@@ -219,3 +221,24 @@ protect-env.sh
 # Base deployment files (if regenerated)
 base-escrow-factory-deployment.json
 base-resolver-deployment.json
+
+# Planning and task files
+*-plan.md
+*-planner.md
+task-*.md
+Final-*.md
+
+# Service check scripts
+check-services.sh
+
+# Debug and development logs
+proxy-debug.log
+proxy.log
+*-debug.log
+
+# Test deployment files
+deployments/*-test.json
+
+# Temporary demo files
+DEMO_INSTRUCTIONS.md
+MOCK_MODE.md

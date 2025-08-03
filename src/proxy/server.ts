@@ -2,11 +2,12 @@ import express, { Request, Response, NextFunction } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import * as dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
+import axios from 'axios';
 // @ts-ignore
 import fetch from 'node-fetch';
-import { QuoteRequest, SwapRequest, ApiError, QuoteParams, SwapParams } from './types.js';
-import { validateQuoteParams, validateSwapParams, ValidationError, buildSafeUrl } from './validators.js';
-import { handleStellarQuote } from './stellar-quote.js';
+import { QuoteRequest, SwapRequest, ApiError, QuoteParams, SwapParams } from './types.ts';
+import { validateQuoteParams, validateSwapParams, ValidationError, buildSafeUrl } from './validators.ts';
+import { handleStellarQuote } from './stellar-quote.ts';
 
 dotenv.config();
 
@@ -224,31 +225,52 @@ const fusionApiProxy = createProxyMiddleware({
 
 // Live mode only - no mock endpoints
 
-// Add handler for fusion/orders/active endpoint (non-mock)
+// Add handler for fusion/orders/active endpoint
 app.get('/api/fusion/orders/active', async (req: Request, res: Response) => {
   try {
-    // In production mode, this would fetch from 1inch API
-    // For now, return mock data to fix frontend connection
-    const mockOrders = [
-      {
-        orderHash: `0x${Math.random().toString(16).slice(2, 16)}`,
-        status: 'active',
-        fromToken: 'USDC',
-        toToken: 'USDC',
-        fromAmount: '100000000',
-        toAmount: '100000000',
-        fromChain: 'base',
-        toChain: 'stellar',
-        createdAt: new Date().toISOString(),
-        crossChain: {
-          enabled: true,
-          destinationChain: 'stellar',
-          stellarReceiver: process.env.DEMO_STELLAR_USER || 'GA5J2WRMKZIWX5DMGAEXHHYSEWTEMSBCQGIK6YGDGYJWDL6TFMILVQWK'
+    // In production, fetch from 1inch API or resolver service
+    if (process.env.NODE_ENV === 'production' && process.env.EXTENDED_RESOLVER_URL) {
+      // Fetch active orders from the resolver service
+      const resolverUrl = process.env.EXTENDED_RESOLVER_URL;
+      const response = await axios.get(`${resolverUrl}/api/orders/active`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.RESOLVER_API_KEY || ''}`,
+          'Accept': 'application/json'
+        },
+        timeout: 5000
+      });
+      
+      // Filter for cross-chain orders involving Stellar
+      const crossChainOrders = response.data.orders?.filter((order: any) => 
+        order.destinationChain === 'stellar' || order.sourceChain === 'stellar'
+      ) || [];
+      
+      res.json({ orders: crossChainOrders });
+    } else if (process.env.NODE_ENV === 'development') {
+      // Development mode - return mock data
+      const mockOrders = [
+        {
+          orderHash: `0x${Math.random().toString(16).slice(2, 16)}`,
+          status: 'active',
+          fromToken: 'USDC',
+          toToken: 'USDC',
+          fromAmount: '100000000',
+          toAmount: '100000000',
+          fromChain: 'base',
+          toChain: 'stellar',
+          createdAt: new Date().toISOString(),
+          crossChain: {
+            enabled: true,
+            destinationChain: 'stellar',
+            stellarReceiver: process.env.DEMO_STELLAR_USER || 'GA5J2WRMKZIWX5DMGAEXHHYSEWTEMSBCQGIK6YGDGYJWDL6TFMILVQWK'
+          }
         }
-      }
-    ];
-    
-    res.json({ orders: mockOrders });
+      ];
+      res.json({ orders: mockOrders });
+    } else {
+      // Production without resolver - return empty
+      res.json({ orders: [] });
+    }
   } catch (error) {
     console.error('Error fetching active orders:', error);
     res.status(500).json({ error: 'Failed to fetch active orders' });
@@ -259,14 +281,27 @@ app.get('/api/fusion/orders/active', async (req: Request, res: Response) => {
 app.post('/api/fusion/orders/create', express.json(), async (req: Request, res: Response) => {
   // Check if this is a Stellar cross-chain order
   const order = req.body;
+  console.log('Received order:', JSON.stringify(order, null, 2));
+  console.log('CrossChain object:', order.crossChain);
+  console.log('Has crossChain?', !!order.crossChain);
+  console.log('destinationChain:', order.crossChain?.destinationChain);
+  console.log('stellarReceiver:', order.crossChain?.stellarReceiver);
+  // Check if makerAsset or takerAsset is a Stellar asset (format: "TOKEN:ADDRESS")
+  const hasStellarAsset = 
+    (order.makerAsset && order.makerAsset.includes(':')) ||
+    (order.takerAsset && order.takerAsset.includes(':'));
+  
   const isStellarOrder = 
     order.crossChain?.destinationChain === 'stellar' ||
-    (order.crossChain?.enabled && order.crossChain?.stellarReceiver);
+    (order.crossChain?.enabled && order.crossChain?.stellarReceiver) ||
+    hasStellarAsset;
+  console.log('Is Stellar order?', isStellarOrder, 'Has Stellar asset?', hasStellarAsset);
   
   if (isStellarOrder) {
     try {
       // Forward to our extended resolver service
       const extendedResolverUrl = process.env.EXTENDED_RESOLVER_URL || 'http://localhost:3003';
+      console.log('Forwarding to extended resolver:', extendedResolverUrl);
       const response = await fetch(`${extendedResolverUrl}/api/orders/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -284,8 +319,11 @@ app.post('/api/fusion/orders/create', express.json(), async (req: Request, res: 
         }),
       });
       
+      console.log('Extended resolver response status:', response.status);
+      
       if (response.ok) {
-        const result = await response.json();
+        const result: any = await response.json();
+        console.log('Extended resolver result:', JSON.stringify(result, null, 2));
         // Return the full order object as expected by frontend
         const fullOrder = {
           orderHash: result.orderId,
@@ -362,7 +400,7 @@ app.get('/api/fusion/orders/:orderHash', async (req: Request, res: Response) => 
     const response = await fetch(`${extendedResolverUrl}/api/orders/${orderHash}`);
     
     if (response.ok) {
-      const data = await response.json();
+      const data: any = await response.json();
       
       // Map extended resolver format to frontend's expected format
       const orderData = data.order || data;
